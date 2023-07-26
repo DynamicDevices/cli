@@ -1,5 +1,12 @@
 .. _ot_cli_sample:
 
+# FORK OF NORDIC CLI EXAMPLE
+
+- we've added a build configuration for nRF52840 dongle
+- we've added USB serial overlay for this dongle
+- we've added TCP overlay for dongle
+- we've added multiprotocol (BLE) overlay for dongle future testing
+
 Thread: CLI
 ###########
 
