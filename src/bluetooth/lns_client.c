@@ -7,13 +7,11 @@
 #include <zephyr/bluetooth/conn.h>
 #include <zephyr/bluetooth/uuid.h>
 #include <zephyr/bluetooth/gatt.h>
+#include <zephyr/logging/log.h>
 
 #include "lns_client.h"
 
-#include <zephyr/logging/log.h>
-
-// TODO: Configure this
-LOG_MODULE_REGISTER(lns_client, 4);
+LOG_MODULE_REGISTER(lns_client, CONFIG_LNS_CLIENT_LOG_LEVEL);
 
 /**
  * @brief Process location and speed value notification
@@ -48,7 +46,7 @@ static uint8_t notify_process(struct bt_conn *conn,
 		return BT_GATT_ITER_STOP;
 	}
 
-	uint16_t flags = *((uint16_t *)&data[0]);
+	uint16_t flags = *((uint16_t *)&bdata[0]);
     LOG_INF("Length: %d", length);
     LOG_INF("Flags 0x%04X", flags);
 

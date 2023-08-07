@@ -8,6 +8,8 @@ menu "Zephyr Kernel"
 source "Kconfig.zephyr"
 endmenu
 
+# Configure OT CLI main
+
 module = OT_COMMAND_LINE_INTERFACE
 module-str = ot_cli
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
@@ -15,5 +17,49 @@ source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
 config CLI_SAMPLE_LOW_POWER
 	bool "Enable low power mode for the CLI sample"
 
-#config BT_LNS_CLIENT_LOG_LEVEL
-#	default 
+# Configure MQTT-SN Client
+
+module = MQTT_SNCLIENT
+module-str = mqtt-snclient
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
+
+config MQTT_SNCLIENT_TOPIC_PREFIX
+	string "Topic Prefix for subscriptions/publications"
+	help
+		Topic Prefix for subscriptions/publications
+	default "sensors"
+
+config MQTT_SNCLIENT_PUBLISH_INTERVAL_S
+	int "Publication interval in ms"
+	default 10000
+
+config MQTT_SNCLIENT_PORT
+	int "MQTT-SN client UDP port"
+	default 10000
+
+config MQTT_SNCLIENT_PREFIX
+	string "Prefix for client ID when connecting"
+	default "tc-"
+
+config MQTT_SNCLIENT_GATEWAY_PORT
+	int "Target gateway multicast port"
+	default 10000
+
+config MQTT_SNCLIENT_GATEWAY_ADDRESS
+	string  "Target gateway multicast address"
+	default "ff03::1"
+
+config MQTT_SNCLIENT_HOPS
+	int "Max number of hops"
+	default 8
+
+# Configure Bluetooth LNS scanner
+
+module = LNS_CLIENT
+module-str = lns-client
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
+
+# Configure Bluetooth Application code
+module = APP_BLUETOOTH
+module-str = app-bluetooth
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"

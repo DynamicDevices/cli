@@ -5,10 +5,6 @@
 		},
 		{
 			"path": "../../../../ncs/v2.4.0/modules/lib/openthread/src"
-		},
-		{
-			"name": "central_bas",
-			"path": "../central_bas"
 		}
 	],
 	"settings": {
@@ -17,7 +13,9 @@
 			"conn.h": "c",
 			"*.porting": "c",
 			"bas_client.h": "c",
-			"settings.h": "c"
+			"settings.h": "c",
+			"log.h": "c",
+			"log_core.h": "c"
 		},
 		"nrf-connect.applications": []
 	}
