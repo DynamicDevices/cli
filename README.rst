@@ -9,7 +9,7 @@ FORK OF NORDIC CLI EXAMPLE
 - we've added multiprotocol (BLE) overlay for dongle future testing
 - this now uses a fork of the MQTT-SN enabled OpenThread for publication
 
-You need to replace `~/ncs/v2.4.0/modules/lib/openthread` with the branch from here https://github.com/DynamicDevices/openthread-upstream/tree/nrf-connect-with-mqtt-sn
+NOTE: You need to replace `~/ncs/v2.4.0/modules/lib/openthread` with the branch from here https://github.com/DynamicDevices/openthread-upstream/tree/nrf-connect-with-mqtt-sn
 
 Thread: CLI
 ###########
