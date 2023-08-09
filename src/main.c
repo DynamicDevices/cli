@@ -77,6 +77,102 @@ static void otStateChanged(otChangedFlags aFlags, void *aContext)
 	else
 	{
 		LOG_INF("State change: Flags 0x%08X", aFlags);
+		switch(aFlags)
+		{
+			case OT_CHANGED_IP6_ADDRESS_ADDED:
+				LOG_INF("IPv6 address was added");
+				break;
+			case OT_CHANGED_IP6_ADDRESS_REMOVED:
+				LOG_INF("IPv6 address was removed");
+				break;
+			case OT_CHANGED_THREAD_ROLE:
+				LOG_INF("Role (disabled, detached, child, router, leader) changed");
+				break;
+			case OT_CHANGED_THREAD_LL_ADDR:
+				LOG_INF("The link-local address changed");
+				break;
+			case OT_CHANGED_THREAD_ML_ADDR:
+				LOG_INF("The mesh-local address changed");
+				break;
+			case OT_CHANGED_THREAD_RLOC_ADDED:
+				LOG_INF("RLOC was added");
+				break;
+			case OT_CHANGED_THREAD_RLOC_REMOVED:
+				LOG_INF("RLOC was removed");
+				break;
+			case OT_CHANGED_THREAD_PARTITION_ID:
+				LOG_INF("Partition ID changed");
+				break;
+			case OT_CHANGED_THREAD_KEY_SEQUENCE_COUNTER:
+				LOG_INF("Thread Key Sequence changed");
+				break;
+			case OT_CHANGED_THREAD_NETDATA:
+				LOG_INF("Thread Network Data changed");
+				break;
+			case OT_CHANGED_THREAD_CHILD_ADDED:
+				LOG_INF("Child was added");
+				break;
+			case OT_CHANGED_THREAD_CHILD_REMOVED:
+				LOG_INF("Child was removed");
+				break;
+			case OT_CHANGED_IP6_MULTICAST_SUBSCRIBED:
+				LOG_INF("Subscribed to a IPv6 multicast address");
+				break;
+			case OT_CHANGED_IP6_MULTICAST_UNSUBSCRIBED:
+				LOG_INF("Unsubscribed from a IPv6 multicast address");
+				break;
+			case OT_CHANGED_THREAD_CHANNEL:
+				LOG_INF("Thread network channel changed");
+				break;
+			case OT_CHANGED_THREAD_PANID:
+				LOG_INF("Thread network PAN Id changed");
+				break;
+			case OT_CHANGED_THREAD_NETWORK_NAME:
+				LOG_INF("Thread network name changed");
+				break;
+			case OT_CHANGED_THREAD_EXT_PANID:
+				LOG_INF("Thread network extended PAN ID changed");
+				break;
+			case OT_CHANGED_NETWORK_KEY:
+				LOG_INF("Network key changed");
+				break;
+			case OT_CHANGED_PSKC:
+				LOG_INF("PSKc changed");
+				break;
+			case OT_CHANGED_SECURITY_POLICY:
+				LOG_INF("Security Policy changed");
+				break;
+			case OT_CHANGED_CHANNEL_MANAGER_NEW_CHANNEL:
+				LOG_INF("Channel Manager new pending Thread channel changed");
+				break;
+			case OT_CHANGED_SUPPORTED_CHANNEL_MASK:
+				LOG_INF("Supported channel mask changed");
+				break;
+			case OT_CHANGED_COMMISSIONER_STATE:
+				LOG_INF("Commissioner state changed");
+				break;
+			case OT_CHANGED_THREAD_NETIF_STATE:
+				LOG_INF("Thread network interface state changed");
+				break;
+			case OT_CHANGED_THREAD_BACKBONE_ROUTER_STATE:
+				LOG_INF("Backbone Router state changed");
+				break;
+			case OT_CHANGED_THREAD_BACKBONE_ROUTER_LOCAL:
+				LOG_INF("Local Backbone Router configuration changed");
+				break;
+			case OT_CHANGED_JOINER_STATE:
+				LOG_INF("Joiner state changed");
+				break;
+			case OT_CHANGED_ACTIVE_DATASET:
+				LOG_INF("Active Operational Dataset changed");
+				break;
+			case OT_CHANGED_PENDING_DATASET:
+				LOG_INF("Pending Operational Dataset changed");
+				break;
+			case OT_CHANGED_NAT64_TRANSLATOR_STATE:
+				LOG_INF("The state of NAT64 translator changed");
+				break;
+		}
 	}
 }
 

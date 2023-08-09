@@ -81,7 +81,23 @@ static void mqttsnHandleConnected(otMqttsnReturnCode aCode, void* aContext)
     }
     else
     {
-        LOG_WRN("HandleConnected - Error");
+        switch(aCode)
+        {
+            case kCodeAccepted:
+                    break;
+            case kCodeRejectedCongestion:
+                    LOG_WRN("HandleConnected - kCodeRejectedCongestion");
+                    break;
+            case kCodeRejectedTopicId:
+                    LOG_WRN("HandleConnected - kCodeRejectedTopicId");
+                    break;
+            case kCodeRejectedNotSupported:
+                    LOG_WRN("HandleConnected - kCodeRejectedNotSupported");
+                    break;
+            case kCodeTimeout:
+                    LOG_WRN("HandleConnected - kCodeTimeout");
+                    break;
+        }
     }
 }
 
