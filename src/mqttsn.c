@@ -141,6 +141,8 @@ void mqttsnSearchGateway(otInstance *instance)
 
 void mqttsnPublishWorkHandler(struct k_work *work)
 {
+    static int count = 0;
+
 	LOG_DBG("Publish Handler %d", _stateCount);
 
 	otInstance *instance = openthread_get_default_instance();
@@ -180,17 +182,34 @@ void mqttsnPublishWorkHandler(struct k_work *work)
     }
 #endif
 
-    if(otMqttsnGetState(instance) == kStateDisconnected || otMqttsnGetState(instance)  == kStateLost)
+    otMqttsnClientState state = otMqttsnGetState(instance);
+
+    switch(state)
+    {
+        case kStateDisconnected:
+            LOG_INF("Client is not connected to gateway");
+            break;
+        case kStateActive:
+            LOG_INF("Client is connected to gateway and currently alive.");
+            break;
+        case kStateAsleep:
+            LOG_INF("Client is in sleeping state.");
+            break;
+        case kStateAwake:
+            LOG_INF("Client is awaken from sleep.");
+            break;
+        case kStateLost:
+            LOG_INF("Client connection is lost due to communication error.");
+            break;
+    }
+
+    if(state == kStateDisconnected || otMqttsnGetState(instance)  == kStateLost)
     {
         LOG_WRN("MQTT g/w disconnected or lost: %d", otMqttsnGetState(instance) );
         mqttsnSearchGateway(instance);
     }
     else
     {
-        static int count = 0;
-        
-        LOG_DBG("Client state %d", otMqttsnGetState(instance));
-
         // Get ID
         otExtAddress extAddress;
         otLinkGetFactoryAssignedIeeeEui64(instance, &extAddress);
