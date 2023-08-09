@@ -20,16 +20,6 @@
 #include "low_power.h"
 #endif
 
-#if DISABLED_SET_THREAD_PARAMETERS
-#define NETWORK_NAME "INST"
-#define PANID 0x4444
-#define EXTPANID {0x33, 0x33, 0x33, 0x33, 0x44, 0x44, 0x44, 0x44}
-#define DEFAULT_CHANNEL 15
-#define MASTER_KEY {0x33, 0x33, 0x44, 0x44, 0x33, 0x33, 0x44, 0x44, 0x33, 0x33, 0x44, 0x44, 0x33, 0x33, 0x44, 0x44}
-static const uint8_t sExpanId[] = EXTPANID;
-static const uint8_t sMasterKey[] = MASTER_KEY;
-#endif
-
 LOG_MODULE_REGISTER(cli_main, CONFIG_OT_COMMAND_LINE_INTERFACE_LOG_LEVEL);
 
 #define WELLCOME_TEXT \
@@ -116,27 +106,30 @@ int main(int aArgc, char *aArgv[])
 
     instance = openthread_get_default_instance();
 
-#if DISABLED_SET_THREAD_PARAMETERS
+#if defined(CONFIG_OPENTHREAD_MANUAL_START)
     otExtendedPanId extendedPanid;
     otNetworkKey masterKey;
+	uint8_t sExpanId[] = EXTPANID;
+	uint8_t sMasterKey[] = MASTER_KEY;
 
 	// Set default network settings
     // Set network name
-    LOG_INF("Setting Network Name to %s", NETWORK_NAME);
-    error = otThreadSetNetworkName(instance, NETWORK_NAME);
-    // Set extended PANID
-    memcpy(extendedPanid.m8, sExpanId, sizeof(sExpanId));
-    LOG_INF("Setting PANID to 0x%04X", PANID);
-    error = otThreadSetExtendedPanId(instance, &extendedPanid);
+    LOG_INF("Setting Network Name to %s", CONFIG_OPENTHREAD_NETWORK_NAME);
+    error = otThreadSetNetworkName(instance, CONFIG_OPENTHREAD_NETWORK_NAME);
     // Set PANID
-    LOG_INF("Setting Extended PANID");
-    error = otLinkSetPanId(instance, PANID);
+    LOG_INF("Setting PANID to %s", CONFIG_OPENTHREAD_PANID);
+    error = otLinkSetPanId(instance, CONFIG_OPENTHREAD_PANID);
+    // Set extended PANID
+	sscanf(CONFIG_OPENTHREAD_XPANID, "%x:%x:%x:%x:x:%x:%x:%x", &sExpanId[0])
+    memcpy(extendedPanid.m8, sExpanId, sizeof(sExpanId));
+    LOG_INF("Setting extended PANID to 0x%04X", CONFIG_OPENTHREAD_XPANID);
+    error = otThreadSetExtendedPanId(instance, &extendedPanid);
     // Set channel
-    LOG_INF("Setting Channel to %d", DEFAULT_CHANNEL);
-    error = otLinkSetChannel(instance, DEFAULT_CHANNEL);
+    LOG_INF("Setting Channel to %d", CONFIG_OPENTHREAD_CHANNEL);
+    error = otLinkSetChannel(instance, CONFIG_OPENTHREAD_CHANNEL);
     // Set masterkey
     LOG_INF("Setting Network Key");
-    memcpy(masterKey.m8, sMasterKey, sizeof(sMasterKey));
+	sscanf(CONFIG_OPENTHREAD_XPANID, "%x:%x:%x:%x:x:%x:%x:%x:%x:%x:%x:%x:x:%x:%x:%x", &masterKey[0])
     error = otThreadSetNetworkKey(instance, &masterKey);
 #endif
 
@@ -144,7 +137,9 @@ int main(int aArgc, char *aArgv[])
     error = otSetStateChangedCallback(instance, otStateChanged, instance);
 
     // Start thread network
+#ifdef OPENTHREAD_CONFIG_IP6_SLAAC_ENABLE
     otIp6SetSlaacEnabled(instance, true);
+#endif
     error = otIp6SetEnabled(instance, true);
     error = otThreadSetEnabled(instance, true);
 
