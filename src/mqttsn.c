@@ -222,7 +222,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         LOG_INF("Publishing...");
         otLedToggle(LED_YELLOW);
 
-        const char* strdata = "{\"ID\":\"%02x%02x%02x%02x%02x%02x%02x%02x\", \"Count\":%d, \"Status\":%s, \"Batt\":%d, \"Latitude\":%d, \"Longitude\":%d, \"Ele\":%d, \"Temperature\":24.0}";
+        const char* strdata = "{\"ID\":\"%02x%02x%02x%02x%02x%02x%02x%02x\", \"Count\":%d, \"Status\":\"%s\", \"Batt\":%d, \"Latitude\":%d, \"Longitude\":%d, \"Ele\":%d, \"Temperature\":24.0}";
         
         char data[256];
         sprintf(data, strdata,
