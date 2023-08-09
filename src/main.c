@@ -13,6 +13,7 @@
 #include "openthread/instance.h"
 #include "openthread/thread.h"
 
+#include "utils.h"
 #include "mqttsn.h"
 #include "app_bluetooth.h"
 
@@ -75,6 +76,7 @@ int main(int aArgc, char *aArgv[])
 		return 0;
 	}
 
+#if defined(CONFIG_WAIT_FOR_CLI_CONNECTION)
 	LOG_INF("Waiting for host to be ready to communicate");
 
 	/* Data Terminal Ready - check if host is ready to communicate */
@@ -87,6 +89,7 @@ int main(int aArgc, char *aArgv[])
 		}
 		k_msleep(100);
 	}
+#endif
 
 	/* Data Carrier Detect Modem - mark connection as established */
 	(void)uart_line_ctrl_set(dev, UART_LINE_CTRL_DCD, 1);
@@ -109,28 +112,30 @@ int main(int aArgc, char *aArgv[])
 #if defined(CONFIG_OPENTHREAD_MANUAL_START)
     otExtendedPanId extendedPanid;
     otNetworkKey masterKey;
-	uint8_t sExpanId[] = EXTPANID;
-	uint8_t sMasterKey[] = MASTER_KEY;
 
 	// Set default network settings
     // Set network name
     LOG_INF("Setting Network Name to %s", CONFIG_OPENTHREAD_NETWORK_NAME);
     error = otThreadSetNetworkName(instance, CONFIG_OPENTHREAD_NETWORK_NAME);
     // Set PANID
-    LOG_INF("Setting PANID to %s", CONFIG_OPENTHREAD_PANID);
-    error = otLinkSetPanId(instance, CONFIG_OPENTHREAD_PANID);
+    LOG_INF("Setting PANID to 0x%04X", (uint16_t)CONFIG_OPENTHREAD_PANID);
+    error = otLinkSetPanId(instance, (const otPanId)CONFIG_OPENTHREAD_PANID);
     // Set extended PANID
-	sscanf(CONFIG_OPENTHREAD_XPANID, "%x:%x:%x:%x:x:%x:%x:%x", &sExpanId[0])
-    memcpy(extendedPanid.m8, sExpanId, sizeof(sExpanId));
-    LOG_INF("Setting extended PANID to 0x%04X", CONFIG_OPENTHREAD_XPANID);
-    error = otThreadSetExtendedPanId(instance, &extendedPanid);
-    // Set channel
-    LOG_INF("Setting Channel to %d", CONFIG_OPENTHREAD_CHANNEL);
-    error = otLinkSetChannel(instance, CONFIG_OPENTHREAD_CHANNEL);
+    LOG_INF("Setting extended PANID to %s", CONFIG_OPENTHREAD_XPANID);
+	int val = datahex(CONFIG_OPENTHREAD_XPANID, &extendedPanid.m8[0], 8);
+    LOG_INF("Val %d", val);
+
+	error = otThreadSetExtendedPanId(instance, (const otExtendedPanId *)&extendedPanid);
+    // Set channel if configured
+	if(CONFIG_OPENTHREAD_CHANNEL > 0)
+	{
+	    LOG_INF("Setting Channel to %d", CONFIG_OPENTHREAD_CHANNEL);
+    	error = otLinkSetChannel(instance, CONFIG_OPENTHREAD_CHANNEL);
+	}
     // Set masterkey
-    LOG_INF("Setting Network Key");
-	sscanf(CONFIG_OPENTHREAD_XPANID, "%x:%x:%x:%x:x:%x:%x:%x:%x:%x:%x:%x:x:%x:%x:%x", &masterKey[0])
-    error = otThreadSetNetworkKey(instance, &masterKey);
+    LOG_INF("Setting Network Key to %s", CONFIG_OPENTHREAD_NETWORKKEY);
+	datahex(CONFIG_OPENTHREAD_NETWORKKEY, &masterKey.m8[0], 16);
+    error = otThreadSetNetworkKey(instance, (const otNetworkKey *)&masterKey);
 #endif
 
     // Register notifier callback to receive thread role changed events
