@@ -1,17 +1,17 @@
 {
   nixConfig = {
-    extra-substituters = [ "https://matthewcroughan.cachix.org" ];
-    extra-trusted-public-keys = [ "matthewcroughan.cachix.org-1:fON2C9BdzJlp1qPan4t5AF0xlnx8sB0ghZf8VDo7+e8=" ];
+    extra-substituters = [ "https://dynamicdevices.cachix.org" ];
+    extra-trusted-public-keys = [ "dynamicdevices.cachix.org-1:XRHcFz9U+B7UbqEUiBlgjKaUe5N87xCZVK0vgCOZQt4=" ];
   };
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-23.05";
     nrf-nix.url = "github:matthewcroughan/nrf-nix";
-    alex-openthread = {
+    openthread-mqttsn = {
       url = "git+https://github.com/DynamicDevices/openthread-upstream?submodules=1&ref=nrf-connect-with-mqtt-sn";
       flake = false;
     };
   };
-  outputs = { self, nixpkgs, nrf-nix, alex-openthread, ... }:
+  outputs = { self, nixpkgs, nrf-nix, openthread-mqttsn, ... }:
   let
     pkgs = import nixpkgs { system = "x86_64-linux"; overlays = [ nrf-nix.overlays.default ]; config = { allowUnfree = true; segger-jlink.acceptLicense = true; }; };
   in
@@ -31,7 +31,7 @@
       app = ".";  # I have to handle apps that are at the root better in nrf-nix
       preBuild = ''
         rm -rf modules/lib/openthread
-        cp -r --no-preserve=mode ${alex-openthread} modules/lib/openthread
+        cp -r --no-preserve=mode ${openthread-mqttsn} modules/lib/openthread
       '';
       cmakeFlags = [
         ''-DEXTRA_CONF_FILE="overlay-usb.conf overlay-multiprotocol.conf"''

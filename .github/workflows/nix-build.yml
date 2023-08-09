@@ -1,4 +1,4 @@
-name: "Test"
+name: "Build Nordic Firmware"
 on:
   pull_request:
   push:
@@ -7,6 +7,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: actions/cache@v3
+      with:
+        path: |
+          /nix/store
+        key: ${{ runner.os }}-${{ hashFiles('**/lockfiles') }}
     - uses: cachix/install-nix-action@v22
       with:
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
@@ -15,5 +20,12 @@ jobs:
         name: dynamicdevices
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
         extraPullNames: nix-community
+    - run: sudo ln -s ~/.local/share/nix/root /nix/store/
     - run: nix build --accept-flake-config
-    - run: nix flake check
+    - run: nix flake check --accept-flake-config
+    - run: cp result/zephyr.hex .
+    - name: Archive code coverage results
+      uses: actions/upload-artifact@v3
+      with:
+          name: Firmware Hex File
+          path: zephyr.hex

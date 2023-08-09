@@ -1,24 +1,5 @@
 {
   "nodes": {
-    "alex-openthread": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1691584469,
-        "narHash": "sha256-zvJymRhrS7qZNATEvJr1vxo+rbWhZ0KPkYBNZN4LufA=",
-        "ref": "nrf-connect-with-mqtt-sn",
-        "rev": "d406ddffa2953d584b18dab7aa4a59813042580c",
-        "revCount": 7313,
-        "submodules": true,
-        "type": "git",
-        "url": "https://github.com/DynamicDevices/openthread-upstream"
-      },
-      "original": {
-        "ref": "nrf-connect-with-mqtt-sn",
-        "submodules": true,
-        "type": "git",
-        "url": "https://github.com/DynamicDevices/openthread-upstream"
-      }
-    },
     "flake-parts": {
       "inputs": {
         "nixpkgs-lib": "nixpkgs-lib"
@@ -94,11 +75,11 @@
         "zephyr-sdk": "zephyr-sdk"
       },
       "locked": {
-        "lastModified": 1690278129,
-        "narHash": "sha256-zVbEqqSHjWCtloJywVnq3FsSTe6MXhqI0nka59FOKUU=",
+        "lastModified": 1691594078,
+        "narHash": "sha256-HECubgF73EsmUrsMw9Nj2c/HL2sZ8aFg+X99KtCG/mw=",
         "owner": "matthewcroughan",
         "repo": "nrf-nix",
-        "rev": "e34a8828d4710d5c3ee9bdea9041a6e33a6628f7",
+        "rev": "c2fdf7297ebbf9b314847e73f0bdd25090c5efe9",
         "type": "github"
       },
       "original": {
@@ -107,11 +88,30 @@
         "type": "github"
       }
     },
+    "openthread-mqttsn": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1691584469,
+        "narHash": "sha256-zvJymRhrS7qZNATEvJr1vxo+rbWhZ0KPkYBNZN4LufA=",
+        "ref": "nrf-connect-with-mqtt-sn",
+        "rev": "d406ddffa2953d584b18dab7aa4a59813042580c",
+        "revCount": 7313,
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/DynamicDevices/openthread-upstream"
+      },
+      "original": {
+        "ref": "nrf-connect-with-mqtt-sn",
+        "submodules": true,
+        "type": "git",
+        "url": "https://github.com/DynamicDevices/openthread-upstream"
+      }
+    },
     "root": {
       "inputs": {
-        "alex-openthread": "alex-openthread",
         "nixpkgs": "nixpkgs",
-        "nrf-nix": "nrf-nix"
+        "nrf-nix": "nrf-nix",
+        "openthread-mqttsn": "openthread-mqttsn"
       }
     },
     "zephyr-sdk": {
