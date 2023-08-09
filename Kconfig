@@ -67,3 +67,8 @@ source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
 module = APP_BLUETOOTH
 module-str = app-bluetooth
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
+
+# Deal with some OpenThread configuration problems
+config OPENTHREAD_WORKING_PANID
+	hex "Default PAN ID (config fix)"
+	default 0x1234

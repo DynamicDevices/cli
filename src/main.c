@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+// Includes
+
 #include <stdio.h>
 
 #include <zephyr/drivers/uart.h>
@@ -20,6 +22,8 @@
 #if defined(CONFIG_CLI_SAMPLE_LOW_POWER)
 #include "low_power.h"
 #endif
+
+// Definitions
 
 LOG_MODULE_REGISTER(cli_main, CONFIG_OT_COMMAND_LINE_INTERFACE_LOG_LEVEL);
 
@@ -41,18 +45,39 @@ static void otStateChanged(otChangedFlags aFlags, void *aContext)
 {
     otInstance *instance = (otInstance *)aContext;
 
-    LOG_INF("State Changed");
-
     // when thread role changed
     if (aFlags & OT_CHANGED_THREAD_ROLE)
     {
-        otDeviceRole role = otThreadGetDeviceRole(instance);
+        otDeviceRole role = (int)otThreadGetDeviceRole(instance);
+		switch(role)
+		{
+		    case 0: // OT_DEVICE_ROLE_DISABLED:
+    			LOG_INF("Role changed to disabled");
+				break;
+    		case 1: // OT_DEVICE_ROLE_DETACHED:
+    			LOG_INF("Role changed to detached");
+				break;
+    		case 2: // OT_DEVICE_ROLE_CHILD:
+    			LOG_INF("Role changed to child");
+				break;
+    		case 3: // OT_DEVICE_ROLE_ROUTER:
+    			LOG_INF("Role changed to router");
+				break;
+    		case 4: //OT_DEVICE_ROLE_LEADER:
+    			LOG_INF("Role changed to leader");
+				break;
+		}
+
         // If role changed to any of active roles then send SEARCHGW message
-        if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER)
+        if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER)
         {
             mqttsnSearchGateway(instance);
         }
     }
+	else
+	{
+		LOG_INF("State change: Flags 0x%08X", aFlags);
+	}
 }
 
 // Main Function
@@ -118,13 +143,11 @@ int main(int aArgc, char *aArgv[])
     LOG_INF("Setting Network Name to %s", CONFIG_OPENTHREAD_NETWORK_NAME);
     error = otThreadSetNetworkName(instance, CONFIG_OPENTHREAD_NETWORK_NAME);
     // Set PANID
-    LOG_INF("Setting PANID to 0x%04X", (uint16_t)CONFIG_OPENTHREAD_PANID);
-    error = otLinkSetPanId(instance, (const otPanId)CONFIG_OPENTHREAD_PANID);
+    LOG_INF("Setting PANID to 0x%04X", (uint16_t)CONFIG_OPENTHREAD_WORKING_PANID);
+    error = otLinkSetPanId(instance, (const otPanId)CONFIG_OPENTHREAD_WORKING_PANID);
     // Set extended PANID
     LOG_INF("Setting extended PANID to %s", CONFIG_OPENTHREAD_XPANID);
 	int val = datahex(CONFIG_OPENTHREAD_XPANID, &extendedPanid.m8[0], 8);
-    LOG_INF("Val %d", val);
-
 	error = otThreadSetExtendedPanId(instance, (const otExtendedPanId *)&extendedPanid);
     // Set channel if configured
 	if(CONFIG_OPENTHREAD_CHANNEL > 0)

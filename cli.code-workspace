@@ -15,7 +15,9 @@
 			"bas_client.h": "c",
 			"settings.h": "c",
 			"log.h": "c",
-			"log_core.h": "c"
+			"log_core.h": "c",
+			"history_tracker.h": "c",
+			"thread.h": "c"
 		},
 		"nrf-connect.applications": []
 	}
