@@ -15,6 +15,7 @@
 
 #include "mqttsn.h"
 #include "app_bluetooth.h"
+#include "gpio.h"
 
 #if defined(CONFIG_CLI_SAMPLE_LOW_POWER)
 #include "low_power.h"
@@ -46,6 +47,7 @@ static void otStateChanged(otChangedFlags aFlags, void *aContext)
     if (aFlags & OT_CHANGED_THREAD_ROLE)
     {
         otDeviceRole role = otThreadGetDeviceRole(instance);
+		otLedRoleIndicator(role);
         // If role changed to any of active roles then send SEARCHGW message
         if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER)
         {
@@ -132,6 +134,9 @@ int main(int aArgc, char *aArgv[])
 	sscanf(CONFIG_OPENTHREAD_XPANID, "%x:%x:%x:%x:x:%x:%x:%x:%x:%x:%x:%x:x:%x:%x:%x", &masterKey[0])
     error = otThreadSetNetworkKey(instance, &masterKey);
 #endif
+
+	// Start LED
+	otLedInit();
 
     // Register notifier callback to receive thread role changed events
     error = otSetStateChangedCallback(instance, otStateChanged, instance);

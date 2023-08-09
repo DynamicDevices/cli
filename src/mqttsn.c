@@ -4,10 +4,13 @@
 
 #include <stdio.h>
 
+#include "openthread/thread.h"
 #include "openthread/mqttsn.h"
 #include "openthread/link.h"
 
 #include <zephyr/logging/log.h>
+
+#include "gpio.h"
 
 // Definitions
 
@@ -33,6 +36,7 @@ static void mqttsnHandlePublished(otMqttsnReturnCode aCode, void* aContext)
 
     // Handle published
     LOG_INF("Published");
+    otLedBlink(1);
 }
 
 static void mqttsnHandleRegistered(otMqttsnReturnCode aCode, const otMqttsnTopic* aTopic, void* aContext)
@@ -42,6 +46,7 @@ static void mqttsnHandleRegistered(otMqttsnReturnCode aCode, const otMqttsnTopic
     if (aCode == kCodeAccepted)
     {
         LOG_DBG("HandleRegistered - OK");
+        otLedBlink(1);
         memcpy(&_aTopic, aTopic, sizeof(otMqttsnTopic));
     }
     else
@@ -56,7 +61,8 @@ static void mqttsnHandleConnected(otMqttsnReturnCode aCode, void* aContext)
     otInstance *instance = (otInstance *)aContext;
     if (aCode == kCodeAccepted)
     {
-        LOG_DBG("HandleConnected -Accepted");
+        LOG_DBG("HandleConnected - Accepted");
+        otLedBlink(1);
 
         // Get ID
         otExtAddress extAddress;
@@ -75,6 +81,7 @@ static void mqttsnHandleConnected(otMqttsnReturnCode aCode, void* aContext)
         );
 
         LOG_DBG("Registering Topic: %s", data);
+        otLedBlink(1);
 
         // Obtain target topic ID
         otMqttsnRegister(instance, data, mqttsnHandleRegistered, (void *)instance);
@@ -90,6 +97,7 @@ static void mqttsnHandleSearchGw(const otIp6Address* aAddress, uint8_t aGatewayI
     OT_UNUSED_VARIABLE(aGatewayId);
 
     LOG_DBG("Got search gateway response");
+     otLedBlink(1);
 
     // Handle SEARCHGW response received
     // Connect to received address
@@ -133,6 +141,7 @@ void mqttsnSearchGateway(otInstance *instance)
     otIp6AddressFromString(GATEWAY_MULTICAST_ADDRESS, &address);
 
     LOG_DBG("Searching for gateway on %s", GATEWAY_MULTICAST_ADDRESS);
+    otLedBlink(1);
 
     otMqttsnSetSearchgwHandler(instance, mqttsnHandleSearchGw, (void *)instance);
     // Send SEARCHGW multicast message
@@ -142,6 +151,7 @@ void mqttsnSearchGateway(otInstance *instance)
 void mqttsnPublishWorkHandler(struct k_work *work)
 {
 	LOG_DBG("Publish Handler %d", _stateCount);
+    otLedBlink(1);
 
 	otInstance *instance = openthread_get_default_instance();
 
@@ -190,6 +200,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         static int count = 0;
         
         LOG_DBG("Client state %d", otMqttsnGetState(instance));
+        otLedBlink(1);
 
         // Get ID
         otExtAddress extAddress;
@@ -202,11 +213,17 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         uint32_t longitude = 0;
         uint32_t elevation = 0;
         uint8_t battery = 100;
-        char *triage_state = "P1";
+
+        otDeviceRole role = otThreadGetDeviceRole(instance);
+        const char* triage_state = otThreadDeviceRoleToString(role);
+        //char *triage_state = "P1";
 
         // Publish message to the registered topic
         LOG_INF("Publishing...");
-        const char* strdata = "{\"id\":%02x%02x%02x%02x%02x%02x%02x%02x, \"count\":%d, \"status\":%s, \"batt\":%d, \"lat\":%d, \"lon\",%d, \"ele\":%d, \"temp\":24.0}";
+        otLedBlink(1);
+
+        const char* strdata = "{\"ID\":\"%02x%02x%02x%02x%02x%02x%02x%02x\", \"Count\":%d, \"Status\":%s, \"Batt\":%d, \"Latitude\":%d, \"Longitude\":%d, \"Ele\":%d, \"Temperature\":24.0}";
+        
         char data[256];
         sprintf(data, strdata,
 		    extAddress.m8[0],
@@ -230,6 +247,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
             mqttsnHandlePublished, NULL);
 
         LOG_DBG("Publishing %d bytes rsp %d", length, err);
+        otLedBlink(1);
     }
 
     // Restart timer
@@ -249,6 +267,8 @@ otError mqttsnInit()
 
     // Start MQTT-SN client
     LOG_INF("Starting MQTT-SN on port %d", CLIENT_PORT);
+    otLedBlink(1);
+    
     otError error = otMqttsnStart(instance, CLIENT_PORT);
 
     /* start one shot timer that expires after 10s */
