@@ -388,7 +388,7 @@ int appbluetoothInit(void)
 		return 0;
 	}
 
-#if 0
+#if 1
 	err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
 	if (err) {
 		LOG_WRN("Scanning failed to start (err %d)", err);

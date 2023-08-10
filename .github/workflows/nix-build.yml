@@ -7,6 +7,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - run: sudo mkdir -p /nix/store
+    - run: sudo ln -s ~/.local/share/nix/root /nix/store/
+    - run: sudo chown $USER /nix/store
     - uses: actions/cache@v3
       with:
         path: |
@@ -17,10 +20,10 @@ jobs:
         github_access_token: ${{ secrets.GITHUB_TOKEN }}
     - uses: cachix/cachix-action@v12
       with:
+        skipPush: true
         name: dynamicdevices
         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
         extraPullNames: nix-community
-    - run: sudo ln -s ~/.local/share/nix/root /nix/store/
     - run: nix build --accept-flake-config
     - run: nix flake check --accept-flake-config
     - run: cp result/zephyr.hex .
@@ -28,4 +31,4 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
           name: Firmware Hex File
-          path: zephyr.hex
+          path: ./zephyr.hex

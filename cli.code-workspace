@@ -5,10 +5,6 @@
 		},
 		{
 			"path": "../../../../ncs/v2.4.0"
-		},
-		{
-			"name": "cli_tmp",
-			"path": "../cli_tmp"
 		}
 	],
 	"settings": {
