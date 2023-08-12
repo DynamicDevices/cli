@@ -29,6 +29,11 @@ static struct bt_lns_client lns;
 
 // Bluetooth code
 
+struct bt_lns_client *getLNSClient()
+{
+	return &lns;
+}
+
 static void notify_location_and_speed_cb(struct bt_lns_client *lns,
 				    struct ble_lns_loc_speed_s *lns_data);
 

@@ -173,9 +173,9 @@ static uint8_t read_process(struct bt_conn *conn, uint8_t err,
 			lns->read_cb(lns, flags, err);
 		}
 	}
-#endif
 
 	lns->read_cb = NULL;
+#endif
 
 	return BT_GATT_ITER_STOP;
 }

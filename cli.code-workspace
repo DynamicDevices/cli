@@ -17,7 +17,8 @@
 			"log.h": "c",
 			"log_core.h": "c",
 			"history_tracker.h": "c",
-			"thread.h": "c"
+			"thread.h": "c",
+			"lns_client.h": "c"
 		},
 		"nrf-connect.applications": []
 	}

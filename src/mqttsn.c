@@ -9,6 +9,9 @@
 
 #include <zephyr/logging/log.h>
 
+#include "app_bluetooth.h"
+#include "bluetooth/lns_client.h"
+
 // Definitions
 
 // Protototypes
@@ -163,41 +166,6 @@ void mqttsnPublishWorkHandler(struct k_work *work)
 
 	otInstance *instance = openthread_get_default_instance();
 
-#if 0
-    _stateCount++;
-
-    if(_stateCount == 3)
-    {
-    	LOG_WRN("*** STOP THREAD");
-        otThreadSetEnabled(instance, false);
-        k_timer_start(&mqttsn_publish_timer, K_SECONDS(10), K_NO_WAIT);
-        return;
-    }
-    if(_stateCount == 6)
-    {
-    	LOG_WRN("*** START BLUETOOTH SCAN");
-    	bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
-        k_timer_start(&mqttsn_publish_timer, K_SECONDS(10), K_NO_WAIT);
-        return;
-    }
-
-    if(_stateCount == 9)
-    {
-    	LOG_WRN("*** STOPPING BLUETOOTH SCAN");
-        bt_scan_stop();
-        k_timer_start(&mqttsn_publish_timer, K_SECONDS(10), K_NO_WAIT);
-        return;
-    }
-    if(_stateCount == 12)
-    {
-    	LOG_WRN("*** STARTING THREAD");    
-        otThreadSetEnabled(instance, true);
-        stateCount = 0;
-        k_timer_start(&mqttsn_publish_timer, K_SECONDS(10), K_NO_WAIT);
-        return;
-    }
-#endif
-
     otMqttsnClientState state = otMqttsnGetState(instance);
 
     switch(state)
@@ -230,12 +198,13 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         otExtAddress extAddress;
         otLinkGetFactoryAssignedIeeeEui64(instance, &extAddress);
 
-// Disable Bluetooth for now
-//        struct ble_lns_loc_speed_s *lns_data = bt_lns_get_last_location_and_speed(&lns);
+        struct bt_lns_client *lns = getLNSClient();
+        struct ble_lns_loc_speed_s *lns_data = bt_lns_get_last_location_and_speed(lns);
 
-        uint32_t latitude = 0;
-        uint32_t longitude = 0;
-        uint32_t elevation = 0;
+        uint32_t latitude = lns_data->latitude;
+        uint32_t longitude = lns_data->longitude;
+        uint32_t elevation = lns_data->elevation;
+
         uint8_t battery = 100;
         char *triage_state = "P1";
 
