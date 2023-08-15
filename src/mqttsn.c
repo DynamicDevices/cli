@@ -142,6 +142,9 @@ static void mqttsnHandleSearchGw(const otIp6Address* aAddress, uint8_t aGatewayI
 
     // Register connected callback
     otMqttsnSetConnectedHandler(instance, mqttsnHandleConnected, (void *)instance);
+
+    LOG_DBG("Trying to connect");
+
     // Connect to the MQTT broker (gateway)
     otMqttsnConnect(instance, &config);
 }
