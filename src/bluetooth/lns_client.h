@@ -1,3 +1,6 @@
+#include <stdbool.h>
+#include <stdint.h>
+
 /*
  * Copyright (c) 2018 Nordic Semiconductor
  *

@@ -11,6 +11,8 @@
 #include <zephyr/logging/log.h>
 
 #include "gpio.h"
+#include "app_bluetooth.h"
+#include "bluetooth/lns_client.h"
 
 // Definitions
 
@@ -88,7 +90,23 @@ static void mqttsnHandleConnected(otMqttsnReturnCode aCode, void* aContext)
     }
     else
     {
-        LOG_WRN("HandleConnected - Error");
+        switch(aCode)
+        {
+            case kCodeAccepted:
+                    break;
+            case kCodeRejectedCongestion:
+                    LOG_WRN("HandleConnected - kCodeRejectedCongestion");
+                    break;
+            case kCodeRejectedTopicId:
+                    LOG_WRN("HandleConnected - kCodeRejectedTopicId");
+                    break;
+            case kCodeRejectedNotSupported:
+                    LOG_WRN("HandleConnected - kCodeRejectedNotSupported");
+                    break;
+            case kCodeTimeout:
+                    LOG_WRN("HandleConnected - kCodeTimeout");
+                    break;
+        }
     }
 }
 
@@ -131,6 +149,9 @@ static void mqttsnHandleSearchGw(const otIp6Address* aAddress, uint8_t aGatewayI
 
     // Register connected callback
     otMqttsnSetConnectedHandler(instance, mqttsnHandleConnected, (void *)instance);
+
+    LOG_DBG("Trying to connect");
+
     // Connect to the MQTT broker (gateway)
     otMqttsnConnect(instance, &config);
 }
@@ -150,47 +171,35 @@ void mqttsnSearchGateway(otInstance *instance)
 
 void mqttsnPublishWorkHandler(struct k_work *work)
 {
+    static int count = 0;
+
 	LOG_DBG("Publish Handler %d", _stateCount);
     otLedToggle(LED_YELLOW);
 
 	otInstance *instance = openthread_get_default_instance();
 
-#if 0
-    _stateCount++;
+    otMqttsnClientState state = otMqttsnGetState(instance);
 
-    if(_stateCount == 3)
+    switch(state)
     {
-    	LOG_WRN("*** STOP THREAD");
-        otThreadSetEnabled(instance, false);
-        k_timer_start(&mqttsn_publish_timer, K_SECONDS(10), K_NO_WAIT);
-        return;
-    }
-    if(_stateCount == 6)
-    {
-    	LOG_WRN("*** START BLUETOOTH SCAN");
-    	bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);
-        k_timer_start(&mqttsn_publish_timer, K_SECONDS(10), K_NO_WAIT);
-        return;
+        case kStateDisconnected:
+            LOG_INF("Client is not connected to gateway");
+            break;
+        case kStateActive:
+            LOG_INF("Client is connected to gateway and currently alive.");
+            break;
+        case kStateAsleep:
+            LOG_INF("Client is in sleeping state.");
+            break;
+        case kStateAwake:
+            LOG_INF("Client is awaken from sleep.");
+            break;
+        case kStateLost:
+            LOG_INF("Client connection is lost due to communication error.");
+            break;
     }
 
-    if(_stateCount == 9)
-    {
-    	LOG_WRN("*** STOPPING BLUETOOTH SCAN");
-        bt_scan_stop();
-        k_timer_start(&mqttsn_publish_timer, K_SECONDS(10), K_NO_WAIT);
-        return;
-    }
-    if(_stateCount == 12)
-    {
-    	LOG_WRN("*** STARTING THREAD");    
-        otThreadSetEnabled(instance, true);
-        stateCount = 0;
-        k_timer_start(&mqttsn_publish_timer, K_SECONDS(10), K_NO_WAIT);
-        return;
-    }
-#endif
-
-    if(otMqttsnGetState(instance) == kStateDisconnected || otMqttsnGetState(instance)  == kStateLost)
+    if(state == kStateDisconnected || otMqttsnGetState(instance)  == kStateLost)
     {
         LOG_WRN("MQTT g/w disconnected or lost: %d", otMqttsnGetState(instance) );
         mqttsnSearchGateway(instance);
@@ -206,12 +215,13 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         otExtAddress extAddress;
         otLinkGetFactoryAssignedIeeeEui64(instance, &extAddress);
 
-// Disable Bluetooth for now
-//        struct ble_lns_loc_speed_s *lns_data = bt_lns_get_last_location_and_speed(&lns);
+        struct bt_lns_client *lns = getLNSClient();
+        struct ble_lns_loc_speed_s *lns_data = bt_lns_get_last_location_and_speed(lns);
 
-        uint32_t latitude = 0;
-        uint32_t longitude = 0;
-        uint32_t elevation = 0;
+        uint32_t latitude = lns_data->latitude;
+        uint32_t longitude = lns_data->longitude;
+        uint32_t elevation = lns_data->elevation;
+
         uint8_t battery = 100;
 
         otDeviceRole role = otThreadGetDeviceRole(instance);

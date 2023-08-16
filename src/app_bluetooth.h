@@ -2,6 +2,7 @@
 #define APP_BLUETOOTH_H_
 
 // Includes
+#include "bluetooth/lns_client.h"
 
 // Defines
 
@@ -10,5 +11,6 @@
 // Prototypes
 
 int appbluetoothInit(void);
+struct bt_lns_client *getLNSClient(void);
 
 #endif

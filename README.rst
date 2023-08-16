@@ -1,3 +1,4 @@
+
 .. _ot_cli_sample:
 
 FORK OF NORDIC CLI EXAMPLE
