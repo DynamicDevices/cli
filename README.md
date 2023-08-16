@@ -30,6 +30,10 @@ NOTE: You need to replace `~/ncs/v2.4.0/modules/lib/openthread` with the branch 
 
 ![image](https://github.com/DynamicDevices/cli/assets/1537834/9fd8513e-ca29-4a6e-9550-e468ce24f437)
 
+- You can subscribe to the log output on e.g. `soaktest/log/1` and store the output for analysis
+  
+![image](https://github.com/DynamicDevices/cli/assets/1537834/67aaefe2-472f-488a-89b8-0ca8f3226ef8)
+
 The flow we are using is as follows
 
 ```
