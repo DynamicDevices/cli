@@ -27,3 +27,220 @@ NOTE: You need to replace `~/ncs/v2.4.0/modules/lib/openthread` with the branch 
 - You can then log the output as the CLI publishes periodically and is turned off and on again
 
 ![image](https://github.com/DynamicDevices/cli/assets/1537834/5f673324-1dae-42c7-b0a5-70502c80a2b2)
+
+![image](https://github.com/DynamicDevices/cli/assets/1537834/217e2f96-23e0-4f2c-8e04-d5c319cdf806)
+
+The flow we are using is as follows
+
+```
+[
+    {
+        "id": "2809316698732fb3",
+        "type": "tab",
+        "label": "OpenThread Soak Testing",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "ade2d79005d0abd1",
+        "type": "mqtt in",
+        "z": "2809316698732fb3",
+        "name": "",
+        "topic": "ot/f4ce361832e86d55",
+        "qos": "2",
+        "datatype": "auto",
+        "broker": "d8af39e4.ee4308",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 330,
+        "y": 280,
+        "wires": [
+            [
+                "4f2de9be4ccafc82"
+            ]
+        ]
+    },
+    {
+        "id": "8632e50a9a419a39",
+        "type": "debug",
+        "z": "2809316698732fb3",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 840,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "4f2de9be4ccafc82",
+        "type": "json",
+        "z": "2809316698732fb3",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 590,
+        "y": 280,
+        "wires": [
+            [
+                "8632e50a9a419a39"
+            ]
+        ]
+    },
+    {
+        "id": "97664cc8eb92968b",
+        "type": "inject",
+        "z": "2809316698732fb3",
+        "name": "Reset Plug",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            },
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "cmnd/tasmota_460742/POWER",
+        "payload": "OFF",
+        "payloadType": "str",
+        "x": 320,
+        "y": 420,
+        "wires": [
+            [
+                "0f39ed25e413e5c1",
+                "6be8d9d5b22aadc7"
+            ]
+        ]
+    },
+    {
+        "id": "0f39ed25e413e5c1",
+        "type": "mqtt out",
+        "z": "2809316698732fb3",
+        "name": "",
+        "topic": "",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "d8af39e4.ee4308",
+        "x": 930,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "c304d6a75d83593e",
+        "type": "delay",
+        "z": "2809316698732fb3",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 700,
+        "y": 500,
+        "wires": [
+            [
+                "0f39ed25e413e5c1"
+            ]
+        ]
+    },
+    {
+        "id": "6be8d9d5b22aadc7",
+        "type": "change",
+        "z": "2809316698732fb3",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "ON",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 510,
+        "y": 500,
+        "wires": [
+            [
+                "c304d6a75d83593e"
+            ]
+        ]
+    },
+    {
+        "id": "d0c67ab7236cb4fc",
+        "type": "mqtt in",
+        "z": "2809316698732fb3",
+        "name": "",
+        "topic": "cmnd/tasmota_460742/POWER",
+        "qos": "2",
+        "datatype": "auto",
+        "broker": "d8af39e4.ee4308",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 370,
+        "y": 160,
+        "wires": [
+            [
+                "8632e50a9a419a39"
+            ]
+        ]
+    },
+    {
+        "id": "d8af39e4.ee4308",
+        "type": "mqtt-broker",
+        "name": "localhost",
+        "broker": "127.0.0.1",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "sessionExpiry": ""
+    }
+]
+```
