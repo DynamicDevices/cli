@@ -1,22 +1,6 @@
 
 .. _ot_cli_sample:
 
-FORK OF NORDIC CLI EXAMPLE
-==========================
-
-- we've added a build configuration for nRF52840 dongle
-- we've added USB serial overlay for this dongle
-- we've added TCP overlay for dongle
-- we've added multiprotocol (BLE) overlay for dongle future testing
-- this now uses a fork of the MQTT-SN enabled OpenThread for publication
-
-NOTE: You need to replace `~/ncs/v2.4.0/modules/lib/openthread` with the branch from here https://github.com/DynamicDevices/openthread-upstream/tree/nrf-connect-with-mqtt-sn
-
-NOTES on LED output
-===================
-
-TBD - Shreya
-
 Thread: CLI
 ###########
 
