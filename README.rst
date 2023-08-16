@@ -12,6 +12,11 @@ FORK OF NORDIC CLI EXAMPLE
 
 NOTE: You need to replace `~/ncs/v2.4.0/modules/lib/openthread` with the branch from here https://github.com/DynamicDevices/openthread-upstream/tree/nrf-connect-with-mqtt-sn
 
+NOTES on LED output
+===================
+
+TBD - Shreya
+
 Thread: CLI
 ###########
 
