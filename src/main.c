@@ -18,6 +18,7 @@
 #include "utils.h"
 #include "mqttsn.h"
 #include "app_bluetooth.h"
+#include "gpio.h"
 
 #if defined(CONFIG_CLI_SAMPLE_LOW_POWER)
 #include "low_power.h"
@@ -48,31 +49,33 @@ static void otStateChanged(otChangedFlags aFlags, void *aContext)
     // when thread role changed
     if (aFlags & OT_CHANGED_THREAD_ROLE)
     {
-        otDeviceRole role = (int)otThreadGetDeviceRole(instance);
-		switch(role)
-		{
-		    case 0: // OT_DEVICE_ROLE_DISABLED:
-    			LOG_INF("Role changed to disabled");
-				break;
-    		case 1: // OT_DEVICE_ROLE_DETACHED:
-    			LOG_INF("Role changed to detached");
-				break;
-    		case 2: // OT_DEVICE_ROLE_CHILD:
-    			LOG_INF("Role changed to child");
-				break;
-    		case 3: // OT_DEVICE_ROLE_ROUTER:
-    			LOG_INF("Role changed to router");
-				break;
-    		case 4: //OT_DEVICE_ROLE_LEADER:
-    			LOG_INF("Role changed to leader");
-				break;
-		}
 
-        // If role changed to any of active roles then send SEARCHGW message
-        if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER)
-        {
-            mqttsnSearchGateway(instance);
-        }
+      otDeviceRole role = otThreadGetDeviceRole(instance);
+		  otLedRoleIndicator(role);
+      switch(role)
+      {
+          case 0: // OT_DEVICE_ROLE_DISABLED:
+            LOG_INF("Role changed to disabled");
+          break;
+          case 1: // OT_DEVICE_ROLE_DETACHED:
+            LOG_INF("Role changed to detached");
+          break;
+          case 2: // OT_DEVICE_ROLE_CHILD:
+            LOG_INF("Role changed to child");
+          break;
+          case 3: // OT_DEVICE_ROLE_ROUTER:
+            LOG_INF("Role changed to router");
+          break;
+          case 4: //OT_DEVICE_ROLE_LEADER:
+            LOG_INF("Role changed to leader");
+          break;
+      }
+
+      // If role changed to any of active roles then send SEARCHGW message
+      if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER)
+      {
+        mqttsnSearchGateway(instance);
+      }
     }
 	else
 	{
@@ -256,6 +259,9 @@ int main(int aArgc, char *aArgv[])
 	datahex(CONFIG_OPENTHREAD_NETWORKKEY, &masterKey.m8[0], 16);
     error = otThreadSetNetworkKey(instance, (const otNetworkKey *)&masterKey);
 #endif
+
+	// Start LED
+	otLedInit();
 
     // Register notifier callback to receive thread role changed events
     error = otSetStateChangedCallback(instance, otStateChanged, instance);

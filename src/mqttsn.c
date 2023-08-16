@@ -4,11 +4,13 @@
 
 #include <stdio.h>
 
+#include "openthread/thread.h"
 #include "openthread/mqttsn.h"
 #include "openthread/link.h"
 
 #include <zephyr/logging/log.h>
 
+#include "gpio.h"
 #include "app_bluetooth.h"
 #include "bluetooth/lns_client.h"
 
@@ -36,6 +38,7 @@ static void mqttsnHandlePublished(otMqttsnReturnCode aCode, void* aContext)
 
     // Handle published
     LOG_INF("Published");
+    otLedToggle(LED_YELLOW);
 }
 
 static void mqttsnHandleRegistered(otMqttsnReturnCode aCode, const otMqttsnTopic* aTopic, void* aContext)
@@ -45,6 +48,7 @@ static void mqttsnHandleRegistered(otMqttsnReturnCode aCode, const otMqttsnTopic
     if (aCode == kCodeAccepted)
     {
         LOG_DBG("HandleRegistered - OK");
+        otLedToggle(LED_YELLOW);
         memcpy(&_aTopic, aTopic, sizeof(otMqttsnTopic));
     }
     else
@@ -59,7 +63,8 @@ static void mqttsnHandleConnected(otMqttsnReturnCode aCode, void* aContext)
     otInstance *instance = (otInstance *)aContext;
     if (aCode == kCodeAccepted)
     {
-        LOG_DBG("HandleConnected -Accepted");
+        LOG_DBG("HandleConnected - Accepted");
+        otLedToggle(LED_YELLOW);;
 
         // Get ID
         otExtAddress extAddress;
@@ -78,6 +83,7 @@ static void mqttsnHandleConnected(otMqttsnReturnCode aCode, void* aContext)
         );
 
         LOG_DBG("Registering Topic: %s", data);
+        otLedToggle(LED_YELLOW);
 
         // Obtain target topic ID
         otMqttsnRegister(instance, data, mqttsnHandleRegistered, (void *)instance);
@@ -109,6 +115,7 @@ static void mqttsnHandleSearchGw(const otIp6Address* aAddress, uint8_t aGatewayI
     OT_UNUSED_VARIABLE(aGatewayId);
 
     LOG_DBG("Got search gateway response");
+     otLedToggle(LED_YELLOW);
 
     // Handle SEARCHGW response received
     // Connect to received address
@@ -155,6 +162,7 @@ void mqttsnSearchGateway(otInstance *instance)
     otIp6AddressFromString(GATEWAY_MULTICAST_ADDRESS, &address);
 
     LOG_DBG("Searching for gateway on %s", GATEWAY_MULTICAST_ADDRESS);
+    otLedToggle(LED_YELLOW);
 
     otMqttsnSetSearchgwHandler(instance, mqttsnHandleSearchGw, (void *)instance);
     // Send SEARCHGW multicast message
@@ -166,6 +174,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
     static int count = 0;
 
 	LOG_DBG("Publish Handler %d", _stateCount);
+    otLedToggle(LED_YELLOW);
 
 	otInstance *instance = openthread_get_default_instance();
 
@@ -197,6 +206,11 @@ void mqttsnPublishWorkHandler(struct k_work *work)
     }
     else
     {
+        static int count = 0;
+        
+        LOG_DBG("Client state %d", otMqttsnGetState(instance));
+        otLedToggle(LED_YELLOW);
+
         // Get ID
         otExtAddress extAddress;
         otLinkGetFactoryAssignedIeeeEui64(instance, &extAddress);
@@ -210,11 +224,18 @@ void mqttsnPublishWorkHandler(struct k_work *work)
 
         uint8_t gps_lock = lns_data->location_present;
         uint8_t battery = 100;
-        char *triage_state = "P1";
+
+        otDeviceRole role = otThreadGetDeviceRole(instance);
+        const char* triage_state = otThreadDeviceRoleToString(role);
+        //char *triage_state = "P1";
 
         // Publish message to the registered topic
         LOG_INF("Publishing...");
-        const char* strdata = "{\"id\":\"%02x%02x%02x%02x%02x%02x%02x%02x\", \"count\":%d, \"status\":\"%s\", \"batt\":%d, \"gps_lock\": %d, \"lat\":%d, \"lon\":%d, \"ele\":%d, \"temp\":24.0}";
+
+        otLedToggle(LED_YELLOW);
+
+ 
+        const char* strdata = "{\"ID\":%02x%02x%02x%02x%02x%02x%02x%02x, \"Count\":%d, \"Status\":%s, \"Batt\":%d, \"Latitude\":%d, \"Longitude\",%d, \"Ele\":%d, \"Temp\":24.0}";
         char data[256];
         sprintf(data, strdata,
 		    extAddress.m8[0],
@@ -239,6 +260,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
             mqttsnHandlePublished, NULL);
 
         LOG_DBG("Publishing %d bytes rsp %d", length, err);
+        otLedToggle(LED_YELLOW);
     }
 
     // Restart timer
@@ -258,6 +280,8 @@ otError mqttsnInit()
 
     // Start MQTT-SN client
     LOG_INF("Starting MQTT-SN on port %d", CLIENT_PORT);
+    otLedToggle(LED_YELLOW);
+    
     otError error = otMqttsnStart(instance, CLIENT_PORT);
 
     /* start one shot timer that expires after 10s */

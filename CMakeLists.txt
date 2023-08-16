@@ -13,6 +13,7 @@ project(openthread_cli)
 target_sources(app PRIVATE  src/main.c 
                             src/utils.c
                             src/mqttsn.c
+                            src/gpio.c
                             src/app_bluetooth.c
                             src/bluetooth/lns_client.c)
 # NORDIC SDK APP END
