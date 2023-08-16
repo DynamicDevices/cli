@@ -75,8 +75,8 @@ The flow we are using is as follows
         "complete": "false",
         "statusVal": "",
         "statusType": "auto",
-        "x": 840,
-        "y": 260,
+        "x": 1170,
+        "y": 160,
         "wires": []
     },
     {
@@ -110,7 +110,7 @@ The flow we are using is as follows
                 "p": "payload"
             }
         ],
-        "repeat": "60",
+        "repeat": "300",
         "crontab": "",
         "once": false,
         "onceDelay": 0.1,
@@ -123,7 +123,7 @@ The flow we are using is as follows
             [
                 "0f39ed25e413e5c1",
                 "6be8d9d5b22aadc7",
-                "19fbbf5b68c047c1"
+                "9e6eaba9eb82538f"
             ]
         ]
     },
@@ -141,7 +141,7 @@ The flow we are using is as follows
         "correl": "",
         "expiry": "",
         "broker": "d8af39e4.ee4308",
-        "x": 930,
+        "x": 1150,
         "y": 420,
         "wires": []
     },
@@ -151,7 +151,7 @@ The flow we are using is as follows
         "z": "2809316698732fb3",
         "name": "",
         "pauseType": "delay",
-        "timeout": "5",
+        "timeout": "20",
         "timeoutUnits": "seconds",
         "rate": "1",
         "nbRateUnits": "1",
@@ -167,7 +167,7 @@ The flow we are using is as follows
         "wires": [
             [
                 "0f39ed25e413e5c1",
-                "19fbbf5b68c047c1"
+                "9e6eaba9eb82538f"
             ]
         ]
     },
@@ -211,7 +211,7 @@ The flow we are using is as follows
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 370,
+        "x": 350,
         "y": 160,
         "wires": [
             [
@@ -233,9 +233,28 @@ The flow we are using is as follows
         "correl": "",
         "expiry": "",
         "broker": "d8af39e4.ee4308",
-        "x": 880,
+        "x": 1190,
         "y": 340,
         "wires": []
+    },
+    {
+        "id": "9e6eaba9eb82538f",
+        "type": "function",
+        "z": "2809316698732fb3",
+        "name": "Make power state output JSON",
+        "func": "\nmsg.payload = \"{ \\\"Power\\\": \\\"\" + msg.payload + \"\\\"}\";\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1000,
+        "y": 260,
+        "wires": [
+            [
+                "19fbbf5b68c047c1"
+            ]
+        ]
     },
     {
         "id": "d8af39e4.ee4308",
