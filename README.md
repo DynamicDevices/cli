@@ -25,3 +25,5 @@ NOTE: You need to replace `~/ncs/v2.4.0/modules/lib/openthread` with the branch 
 - Connect the CLI dongle device to a USB power plug attached to the Tasmota plug
 
 - You can then log the output as the CLI publishes periodically and is turned off and on again
+
+![image](https://github.com/DynamicDevices/cli/assets/1537834/5f673324-1dae-42c7-b0a5-70502c80a2b2)
