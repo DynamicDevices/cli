@@ -91,7 +91,8 @@ The flow we are using is as follows
         "y": 280,
         "wires": [
             [
-                "8632e50a9a419a39"
+                "8632e50a9a419a39",
+                "19fbbf5b68c047c1"
             ]
         ]
     },
@@ -212,9 +213,28 @@ The flow we are using is as follows
         "y": 160,
         "wires": [
             [
-                "8632e50a9a419a39"
+                "8632e50a9a419a39",
+                "19fbbf5b68c047c1"
             ]
         ]
+    },
+    {
+        "id": "19fbbf5b68c047c1",
+        "type": "mqtt out",
+        "z": "2809316698732fb3",
+        "name": "Soak Test Logging",
+        "topic": "soaktest/log/1",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "d8af39e4.ee4308",
+        "x": 880,
+        "y": 340,
+        "wires": []
     },
     {
         "id": "d8af39e4.ee4308",
@@ -242,5 +262,4 @@ The flow we are using is as follows
         "willMsg": {},
         "sessionExpiry": ""
     }
-]
-```
+]```
