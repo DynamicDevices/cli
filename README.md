@@ -28,7 +28,7 @@ NOTE: You need to replace `~/ncs/v2.4.0/modules/lib/openthread` with the branch 
 
 ![image](https://github.com/DynamicDevices/cli/assets/1537834/5f673324-1dae-42c7-b0a5-70502c80a2b2)
 
-![image](https://github.com/DynamicDevices/cli/assets/1537834/217e2f96-23e0-4f2c-8e04-d5c319cdf806)
+![image](https://github.com/DynamicDevices/cli/assets/1537834/9fd8513e-ca29-4a6e-9550-e468ce24f437)
 
 The flow we are using is as follows
 
