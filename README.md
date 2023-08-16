@@ -122,7 +122,8 @@ The flow we are using is as follows
         "wires": [
             [
                 "0f39ed25e413e5c1",
-                "6be8d9d5b22aadc7"
+                "6be8d9d5b22aadc7",
+                "19fbbf5b68c047c1"
             ]
         ]
     },
@@ -165,7 +166,8 @@ The flow we are using is as follows
         "y": 500,
         "wires": [
             [
-                "0f39ed25e413e5c1"
+                "0f39ed25e413e5c1",
+                "19fbbf5b68c047c1"
             ]
         ]
     },
@@ -213,8 +215,7 @@ The flow we are using is as follows
         "y": 160,
         "wires": [
             [
-                "8632e50a9a419a39",
-                "19fbbf5b68c047c1"
+                "8632e50a9a419a39"
             ]
         ]
     },
@@ -262,4 +263,5 @@ The flow we are using is as follows
         "willMsg": {},
         "sessionExpiry": ""
     }
-]```
+]
+```
