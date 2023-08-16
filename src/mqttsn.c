@@ -14,6 +14,8 @@
 #include "app_bluetooth.h"
 #include "bluetooth/lns_client.h"
 
+#include <nrfx_temp.h>
+
 // Definitions
 
 // Protototypes
@@ -171,8 +173,6 @@ void mqttsnSearchGateway(otInstance *instance)
 
 void mqttsnPublishWorkHandler(struct k_work *work)
 {
-    static int count = 0;
-
 	LOG_DBG("Publish Handler %d", _stateCount);
     otLedToggle(LED_YELLOW);
 
@@ -215,6 +215,19 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         otExtAddress extAddress;
         otLinkGetFactoryAssignedIeeeEui64(instance, &extAddress);
 
+        // Get temperature
+        nrfx_err_t status = nrfx_temp_measure();
+        NRFX_ASSERT(status == NRFX_SUCCESS);
+
+        int32_t temperature = nrfx_temp_result_get();
+        int32_t celsius_temperature = nrfx_temp_calculate(temperature);
+
+        int32_t whole_celsius = celsius_temperature / 100;
+        uint8_t fraction_celsius = NRFX_ABS(celsius_temperature % 100);
+
+        LOG_INF("Measured temperature: %d.%02u [C]", whole_celsius, fraction_celsius);
+
+        // Get GNSS data
         struct bt_lns_client *lns = getLNSClient();
         struct ble_lns_loc_speed_s *lns_data = bt_lns_get_last_location_and_speed(lns);
 
@@ -234,7 +247,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
 
         otLedToggle(LED_YELLOW);
  
-        const char* strdata = "{\"ID\":\"%02x%02x%02x%02x%02x%02x%02x%02x\", \"Count\":%d, \"Status\":\"%s\", \"Batt\":%d, \"Latitude\":%d, \"Longitude\":%d, \"Ele\":%d, \"Temp\":24.0}";
+        const char* strdata = "{\"ID\":\"%02x%02x%02x%02x%02x%02x%02x%02x\", \"Count\":%d, \"Status\":\"%s\", \"Battery\":%d, \"Latitude\":%d, \"Longitude\":%d, \"Elevation\":%d, \"Temperature\":%d.%d }";
         char data[256];
         sprintf(data, strdata,
 		    extAddress.m8[0],
@@ -251,7 +264,9 @@ void mqttsnPublishWorkHandler(struct k_work *work)
             gps_lock,
             latitude,
             longitude,
-            elevation);
+            elevation,
+            whole_celsius, fraction_celsius 
+            );
         
         int32_t length = strlen(data);
 

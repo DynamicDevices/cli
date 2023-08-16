@@ -3,6 +3,10 @@
  * SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
  */
 
+&temp {
+    status = "okay";
+};
+
 &uart0 {
 	status = "okay";
 	hw-flow-control;

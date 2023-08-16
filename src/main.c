@@ -15,6 +15,8 @@
 #include "openthread/instance.h"
 #include "openthread/thread.h"
 
+#include "nrfx_temp.h"
+
 #include "utils.h"
 #include "mqttsn.h"
 #include "app_bluetooth.h"
@@ -227,6 +229,12 @@ int main(int aArgc, char *aArgv[])
 	low_power_enable();
 #endif
 
+	// Initialise internal temperature reading
+    nrfx_err_t status;
+	nrfx_temp_config_t config = NRFX_TEMP_DEFAULT_CONFIG;
+    status = nrfx_temp_init(&config, NULL);
+    NRFX_ASSERT(status == NRFX_SUCCESS);
+
 	// New code
 	otInstance *instance;
     otError error = OT_ERROR_NONE;
@@ -246,7 +254,7 @@ int main(int aArgc, char *aArgv[])
     error = otLinkSetPanId(instance, (const otPanId)CONFIG_OPENTHREAD_WORKING_PANID);
     // Set extended PANID
     LOG_INF("Setting extended PANID to %s", CONFIG_OPENTHREAD_XPANID);
-	int val = datahex(CONFIG_OPENTHREAD_XPANID, &extendedPanid.m8[0], 8);
+	datahex(CONFIG_OPENTHREAD_XPANID, &extendedPanid.m8[0], 8);
 	error = otThreadSetExtendedPanId(instance, (const otExtendedPanId *)&extendedPanid);
     // Set channel if configured
 	if(CONFIG_OPENTHREAD_CHANNEL > 0)
@@ -274,7 +282,8 @@ int main(int aArgc, char *aArgv[])
     error = otThreadSetEnabled(instance, true);
 
 	// Start Bluetooth
-    appbluetoothInit();
+// CHECK LOCKUP
+//    appbluetoothInit();
 
 	// Start MQTT-SN client
 	mqttsnInit();
