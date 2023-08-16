@@ -208,12 +208,13 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         uint32_t longitude = lns_data->longitude;
         uint32_t elevation = lns_data->elevation;
 
+        uint8_t gps_lock = lns_data->location_present;
         uint8_t battery = 100;
         char *triage_state = "P1";
 
         // Publish message to the registered topic
         LOG_INF("Publishing...");
-        const char* strdata = "{\"id\":%02x%02x%02x%02x%02x%02x%02x%02x, \"count\":%d, \"status\":%s, \"batt\":%d, \"lat\":%d, \"lon\",%d, \"ele\":%d, \"temp\":24.0}";
+        const char* strdata = "{\"id\":\"%02x%02x%02x%02x%02x%02x%02x%02x\", \"count\":%d, \"status\":\"%s\", \"batt\":%d, \"gps_lock\": %d, \"lat\":%d, \"lon\":%d, \"ele\":%d, \"temp\":24.0}";
         char data[256];
         sprintf(data, strdata,
 		    extAddress.m8[0],
@@ -227,6 +228,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
 		    count++, 
             triage_state, 
             battery,
+            gps_lock,
             latitude,
             longitude,
             elevation);
