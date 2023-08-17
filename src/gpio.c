@@ -101,10 +101,9 @@ void otLedRoleIndicator(otDeviceRole role) {
             break;
         case OT_DEVICE_ROLE_DETACHED:
         case OT_DEVICE_ROLE_DISABLED:
-            otLedToggle(LED_RED);
-            otLedToggle(LED_BLUE);
-            otLedToggle(LED_GREEN);
-            otLedToggle(LED_YELLOW);
+            otLedSetOn(LED_RED);
+            otLedSetOn(LED_BLUE);
+            otLedSetOn(LED_GREEN);
             break;
     }
 }
