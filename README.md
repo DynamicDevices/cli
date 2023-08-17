@@ -12,7 +12,18 @@ NOTE: You need to replace `~/ncs/v2.4.0/modules/lib/openthread` with the branch 
 
 ## NOTES on LED output
 
-**TBD** - Shreya
+The nRF528540 Dongle is equipped with a yellow LED and a multicolor RGB LED.
+
+- RGB LED is used to determine different states of nodes in Thread Network.
+
+| **RGB LED Colour** | **Role of Node** |
+| :---: | :---: |
+| Red | Leader |
+| Blue | Router |
+| Green | Child |
+| White | Detached or Disabled |
+
+- Yellow LED toggles when CLI firmware is publishing the data.
 
 ## NOTES on soak testing
 
