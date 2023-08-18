@@ -15,7 +15,9 @@
 #include "openthread/instance.h"
 #include "openthread/thread.h"
 
+#ifdef CONFIG_NRFX_TEMP
 #include "nrfx_temp.h"
+#endif
 
 #include "utils.h"
 #include "mqttsn.h"
@@ -229,11 +231,13 @@ int main(int aArgc, char *aArgv[])
 	low_power_enable();
 #endif
 
+#ifdef CONFIG_NRFX_TEMP
 	// Initialise internal temperature reading
     nrfx_err_t status;
 	nrfx_temp_config_t config = NRFX_TEMP_DEFAULT_CONFIG;
     status = nrfx_temp_init(&config, NULL);
     NRFX_ASSERT(status == NRFX_SUCCESS);
+#endif
 
 	// New code
 	otInstance *instance;
