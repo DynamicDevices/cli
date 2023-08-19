@@ -300,11 +300,15 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         int32_t whole_celsius = 0;
         uint8_t fraction_celsius = 0;
 
+        // Get RLOC16
+        uint16_t uRLOC16 = otLinkGetShortAddress(instance);
+
 #ifdef CONFIG_NRFX_TEMP
         // Get temperature
         nrfx_err_t status = nrfx_temp_measure();
-        NRFX_ASSERT(status == NRFX_SUCCESS);
-
+        if(status != NRFX_SUCCESS)
+            LOG_WRN("Error reading temperature: %d", status);
+            
         int32_t temperature = nrfx_temp_result_get();
         int32_t celsius_temperature = nrfx_temp_calculate(temperature);
 
@@ -334,9 +338,10 @@ void mqttsnPublishWorkHandler(struct k_work *work)
 
         otLedToggle(LED_YELLOW);
  
-        const char* strdata = "{\"ID\":\"%s\", \"Version\":\"%s\", \"Count\":%d, \"Status\":\"%s\", \"Battery\":%d, \"GPSLock\": %d, \"Latitude\":%d, \"Longitude\":%d, \"Elevation\":%d, \"Temperature\":%d.%02u }";
+        const char* strdata = "{\"ID\":\"%s\", \"RLOC16\":\"%04X\", \"Version\":\"%s\", \"Count\":%d, \"Status\":\"%s\", \"Battery\":%d, \"GPSLock\": %d, \"Latitude\":%d, \"Longitude\":%d, \"Elevation\":%d, \"Temperature\":%d.%02u }";
         char data[256];
         sprintf(data, strdata, _eui64,
+            uRLOC16,
             VERSION,
 		    count++,
             triage_state, 
