@@ -364,8 +364,9 @@ int appbluetoothInit(void)
     int err;
 
 	LOG_INF("Starting Bluetooth Central LNS example");
+    k_msleep(1000);
     
-	bt_lns_client_init(&lns);
+//	bt_lns_client_init(&lns);
 
 	err = bt_enable(NULL);
 	if (err) {
@@ -374,11 +375,13 @@ int appbluetoothInit(void)
 	}
 
 	LOG_INF("Bluetooth initialized");
+    k_msleep(1000);
 
 	if (IS_ENABLED(CONFIG_SETTINGS)) {
 		settings_load();
 	}
 
+#if 0
 	scan_init();
 
 	err = bt_conn_auth_cb_register(&conn_auth_callbacks);
@@ -392,6 +395,10 @@ int appbluetoothInit(void)
 		LOG_WRN("Failed to register authorization info callbacks.");
 		return 0;
 	}
+#endif
+
+	LOG_INF("Bluetooth start scan");
+    k_msleep(5000);
 
 #if 1
 	err = bt_scan_start(BT_SCAN_TYPE_SCAN_ACTIVE);

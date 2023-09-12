@@ -9,6 +9,8 @@
 #include "openthread/mqttsn.h"
 #include "openthread/link.h"
 
+#include <zephyr/drivers/lora.h>
+#include <zephyr/lorawan/lorawan.h>
 #include <zephyr/logging/log.h>
 
 #include "gpio.h"
@@ -257,11 +259,45 @@ void mqttsnSearchGateway(otInstance *instance)
     otMqttsnSearchGateway(instance, &address, GATEWAY_MULTICAST_PORT, GATEWAY_MULTICAST_RADIUS);
 }
 
+bool sbt = false;
+
+// LORA
+
+// LoRaWAN
+
+static void dl_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t snr, uint8_t len, const uint8_t *data)
+{
+	LOG_INF("Port %d, Pending %d, RSSI %ddB, SNR %ddBm", port, data_pending, rssi, snr);
+	if (data) {
+		LOG_HEXDUMP_INF(data, len, "Payload: ");
+	}
+}
+
+static void lorwan_datarate_changed(enum lorawan_datarate dr)
+{
+	uint8_t unused, max_size;
+
+	lorawan_get_payload_sizes(&unused, &max_size);
+	LOG_INF("New Datarate: DR_%d, Max Payload %d", dr, max_size);
+}
+
 void mqttsnPublishWorkHandler(struct k_work *work)
 {
 	LOG_DBG("Publish Handler %d", _stateCount);
     otLedToggle(LED_YELLOW);
-
+    
+    if(!sbt)
+    {
+        sbt = true;
+        LOG_DBG("Start Bluetooth");
+        k_msleep(1000);
+        LOG_DBG("Start Bluetooth 2");
+        k_msleep(1000);
+        LOG_DBG("Start Bluetooth 3");
+        appbluetoothInit();
+        LOG_DBG("Started Bluetooth");
+    }
+    
 	otInstance *instance = openthread_get_default_instance();
 
     otMqttsnClientState state = otMqttsnGetState(instance);

@@ -5,6 +5,10 @@
 		},
 		{
 			"path": "../../../../ncs/v2.4.0"
+		},
+		{
+			"name": "mps_test",
+			"path": "../mps_test"
 		}
 	],
 	"settings": {
