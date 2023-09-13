@@ -48,6 +48,9 @@ static K_TIMER_DEFINE(mqttsnPublishTimer, mqttsnPublishHandler, NULL);
 static uint32_t _stateCount = 0;
 static enum MQTTSN_CLIENT_STATE _eMQTTSNClientState = STATE_NONE;
 
+int32_t whole_celsius = 0;
+uint8_t fraction_celsius = 0;
+
 // Functions
 
 LOG_MODULE_REGISTER(mqttsn, CONFIG_MQTT_SNCLIENT_LOG_LEVEL);
@@ -259,47 +262,12 @@ void mqttsnSearchGateway(otInstance *instance)
     otMqttsnSearchGateway(instance, &address, GATEWAY_MULTICAST_PORT, GATEWAY_MULTICAST_RADIUS);
 }
 
-bool sbt = false;
-
-// LORA
-
-// LoRaWAN
-
-static void dl_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t snr, uint8_t len, const uint8_t *data)
-{
-	LOG_INF("Port %d, Pending %d, RSSI %ddB, SNR %ddBm", port, data_pending, rssi, snr);
-	if (data) {
-		LOG_HEXDUMP_INF(data, len, "Payload: ");
-	}
-}
-
-static void lorwan_datarate_changed(enum lorawan_datarate dr)
-{
-	uint8_t unused, max_size;
-
-	lorawan_get_payload_sizes(&unused, &max_size);
-	LOG_INF("New Datarate: DR_%d, Max Payload %d", dr, max_size);
-}
-
 void mqttsnPublishWorkHandler(struct k_work *work)
 {
 	LOG_DBG("Publish Handler %d", _stateCount);
     otLedToggle(LED_YELLOW);
-    
-    if(!sbt)
-    {
-        sbt = true;
-        LOG_DBG("Start Bluetooth");
-        k_msleep(1000);
-        LOG_DBG("Start Bluetooth 2");
-        k_msleep(1000);
-        LOG_DBG("Start Bluetooth 3");
-        appbluetoothInit();
-        LOG_DBG("Started Bluetooth");
-    }
-    
-	otInstance *instance = openthread_get_default_instance();
 
+	otInstance *instance = openthread_get_default_instance();
     otMqttsnClientState state = otMqttsnGetState(instance);
 
     switch(state)
@@ -329,12 +297,9 @@ void mqttsnPublishWorkHandler(struct k_work *work)
     else
     {
         static int count = 0;
-        
+
         LOG_DBG("Client state %d", otMqttsnGetState(instance));
         otLedToggle(LED_YELLOW);
-
-        int32_t whole_celsius = 0;
-        uint8_t fraction_celsius = 0;
 
         // Get RLOC16
         uint16_t uRLOC16 = otLinkGetShortAddress(instance);
@@ -354,32 +319,29 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         LOG_INF("Measured temperature: %d.%02u [C]", whole_celsius, fraction_celsius);
 #endif
 
-        // Get GNSS data
-        struct bt_lns_client *lns = getLNSClient();
-        struct ble_lns_loc_speed_s *lns_data = bt_lns_get_last_location_and_speed(lns);
+        uint32_t latitude = 0;
+        uint32_t longitude = 0;
+        uint32_t elevation = 0;
 
-        uint32_t latitude = lns_data->latitude;
-        uint32_t longitude = lns_data->longitude;
-        uint32_t elevation = lns_data->elevation;
+        uint8_t gps_lock = 0;
 
-        uint8_t gps_lock = lns_data->location_present;
         uint8_t battery = 100;
 
-        otDeviceRole role = otThreadGetDeviceRole(instance);
-        const char* triage_state = otThreadDeviceRoleToString(role);
-        //char *triage_state = "P1";
+        const char* role = otThreadDeviceRoleToString(otThreadGetDeviceRole(instance));
+        char *triage_state = "P1";
 
         // Publish message to the registered topic
         LOG_INF("Publishing...");
 
         otLedToggle(LED_YELLOW);
  
-        const char* strdata = "{\"ID\":\"%s\", \"RLOC16\":\"%04X\", \"Version\":\"%s\", \"Count\":%d, \"Status\":\"%s\", \"Battery\":%d, \"GPSLock\": %d, \"Latitude\":%d, \"Longitude\":%d, \"Elevation\":%d, \"Temperature\":%d.%02u }";
+        const char* strdata = "{\"ID\":\"%s\", \"RLOC16\":\"%04X\", \"Version\":\"%d\", \"Count\":%d, \"Role\":\"%s\", \"Status\":\"%s\", \"Battery\":%d, \"GPSLock\": %d, \"Latitude\":%d, \"Longitude\":%d, \"Elevation\":%d, \"Temperature\":%d.%02u }";
         char data[256];
         sprintf(data, strdata, _eui64,
             uRLOC16,
             VERSION,
 		    count++,
+            role,
             triage_state, 
             battery,
             gps_lock,

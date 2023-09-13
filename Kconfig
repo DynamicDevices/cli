@@ -72,3 +72,15 @@ source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
 config OPENTHREAD_WORKING_PANID
 	hex "Default PAN ID (config fix)"
 	default 0x1234
+
+# Configure GPS
+
+module = GPS_PARSER
+module-str = gps-parser
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
+
+# Configure LoRaWAN Client
+
+module = LORAWAN_CLIENT
+module-str = gps-parser
+source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"

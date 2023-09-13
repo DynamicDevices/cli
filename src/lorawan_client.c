@@ -24,13 +24,15 @@
 #include "openthread/thread.h"
 #include "openthread/link.h"
 
+#include "app.h"
 #include "nvs.h"
+#include "gpsparser.h"
 
-#include "lorawan.h"
+#include "lorawan_client.h"
 
 #define DELAY K_SECONDS(30)
 
-LOG_MODULE_REGISTER(lorawan_client, CONFIG_OT_COMMAND_LINE_INTERFACE_LOG_LEVEL);
+LOG_MODULE_REGISTER(lorawan_client, CONFIG_LORAWAN_CLIENT_LOG_LEVEL);
 
 static void dl_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t snr, uint8_t len, const uint8_t *data)
 {
@@ -50,6 +52,36 @@ static void lorwan_datarate_changed(enum lorawan_datarate dr)
 	LOG_INF("New Datarate: DR_%d, Max Payload %d", dr, max_size);
 }
 
+bool _gnssValid = false;
+float _gnssLatitude = 0.0;
+float _gnssLongitude = 0.0;
+float _gnssElevation = 0.0;
+float _gnssSpeed = 0.0;
+
+// TODO: Need a mutex here
+
+void rmc_handler(bool valid, float latitude, float longitude, float speed)
+{
+	_gnssValid = valid;
+	_gnssLatitude = valid ? latitude : 0.0f;
+	_gnssLongitude = valid ? longitude: 0.0f;
+	_gnssSpeed = valid ? speed : 0.0f;
+
+	LOG_INF("Valid: %d, Latitude: %f, Longitude: %f, Speed: %f",
+		valid,
+		latitude,
+		longitude,
+		speed);
+}
+
+void gga_handler(float elevation)
+{
+	_gnssElevation = elevation;
+
+	LOG_INF("Elevation: %f", 
+		elevation);
+}
+
 int lorawan_client_thread(void)
 {
 	const struct device *lora_dev;
@@ -57,7 +89,6 @@ int lorawan_client_thread(void)
 	
 	struct lorawan_join_config join_cfg;
 	uint16_t dev_nonce = 0;
-	uint16_t payload[2];
 
 #ifdef LORAWAN_USE_NVS 
 	uint8_t dev_eui[8];
@@ -173,11 +204,51 @@ int lorawan_client_thread(void)
 	}
 #endif
 
+	int count = 0;
+    enum TriageStatus triage_status = P0;
+	int battery_percentage = 100;
+
+	// Set GNSS callback
+	set_callback_rmc(rmc_handler);
+
 	while (1) {
 
-		payload[0] = payload[0] + 1;
+#define LORAWAN_PORT 2
+#define PAYLOAD_SIZE 16
+		uint8_t payload[PAYLOAD_SIZE];
 
-		ret = lorawan_send(2, (uint8_t *)&payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
+		// Build test payload format here - keep it similar to OpenThread payload
+        // Byte 0 - \"Version\":\"%s\", 
+		payload[0] = VERSION;
+
+		// Byte 1 - \"Count\":%d, 
+		payload[1] = count++;
+
+		// Byte 2 - \"Status\":\"%s\", 
+		payload[2] = triage_status;
+
+		// Byte 3 - \"Battery\":%d, 
+		payload[3] = battery_percentage;
+
+		// Byte 4 - Bits - bit0 GPSlock
+		payload[4] = _gnssValid ? 0x01: 0x00;
+
+		// Byte 5 .. 8 \"Latitude\":%d, 
+		*((float *)&payload[5]) = _gnssLatitude;
+
+		// Byte 9 .. 12 \"Longitude\":%d, 
+		*((float *)&payload[9]) = _gnssLongitude;
+
+		// Byte 13 .. \"Elevation\":%d,
+		payload[13] = (int)_gnssElevation;
+
+		// Byte 14 \"Speed\":%d, 
+		payload[14] = (int)_gnssSpeed;
+
+		// Byte 15 - \"Temperature\":%d.%02u }";
+		payload[15] = whole_celsius;
+
+		ret = lorawan_send(LORAWAN_PORT, payload, PAYLOAD_SIZE, LORAWAN_MSG_UNCONFIRMED);
 		if (ret == -EAGAIN) {
 			LOG_ERR("lorawan_send failed: %d. Continuing...", ret);
 			k_sleep(DELAY);

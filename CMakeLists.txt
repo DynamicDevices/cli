@@ -16,6 +16,8 @@ target_sources(app PRIVATE  src/main.c
                             src/gpio.c
                             src/openthread_client.c
                             src/lorawan_client.c
+                            src/gpsparser.c
+                            src/minmea.c
                             src/nvs.c
                             src/app_bluetooth.c
                             src/bluetooth/lns_client.c)
