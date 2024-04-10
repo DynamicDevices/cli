@@ -22,7 +22,7 @@ LOG_MODULE_REGISTER(gpsparser, CONFIG_GPS_PARSER_LOG_LEVEL);
 
 #define INDENT_SPACES "  "
 
-const struct device *uart = DEVICE_DT_GET(DT_NODELABEL(uart1));
+const struct device *uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
 
 const struct uart_config uart_cfg = {
 		.baudrate = 9600,
