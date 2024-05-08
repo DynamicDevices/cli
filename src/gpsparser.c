@@ -14,6 +14,7 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/uart.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 
 #include "gpsparser.h"
@@ -22,10 +23,21 @@ LOG_MODULE_REGISTER(gpsparser, CONFIG_GPS_PARSER_LOG_LEVEL);
 
 #define INDENT_SPACES "  "
 
+// 1000 msec = 1 sec
+#define SLEEP_TIME_S   1000
+#define SLEEP_TIME_MS	100
+#define SLEEP_TIME_MMS	 10
+
+#define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
+
+const struct gpio_dt_spec gnss_vbckup = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnss_vbckp_on_gpios);
+const struct gpio_dt_spec gnss_vcc = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnss_vcc_on_gpios);
+const struct gpio_dt_spec gnss_reset = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnss_reset_gpios);
+
 const struct device *uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
 
 const struct uart_config uart_cfg = {
-		.baudrate = 9600,
+		.baudrate = 115200,
 		.parity = UART_CFG_PARITY_NONE,
 		.stop_bits = UART_CFG_STOP_BITS_1,
 		.data_bits = UART_CFG_DATA_BITS_8,
@@ -86,6 +98,33 @@ void set_callback_gga( GgaHandler handler)
 void gpsparser(void)
 {
     char line[MINMEA_MAX_LENGTH];
+    int ret;
+
+    if (!gpio_is_ready_dt(&gnss_vbckup)) { return; }
+	if (!gpio_is_ready_dt(&gnss_vcc)) { return; }
+	if (!gpio_is_ready_dt(&gnss_reset)) { return; }
+	LOG_INF("pins are ready.");
+
+    // Configure the pins
+    ret = gpio_pin_configure_dt(&gnss_vbckup, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0) { return; }
+	ret = gpio_pin_configure_dt(&gnss_vcc, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0) { return; }
+	ret = gpio_pin_configure_dt(&gnss_reset, GPIO_OUTPUT_INACTIVE);
+	if (ret < 0) { return; }
+	LOG_INF("pins are configured.");
+
+    // GNSS start-up procedure
+	LOG_INF("GNSS start-up procedure...");
+	gpio_pin_set_dt(&gnss_vbckup, 0);
+	gpio_pin_set_dt(&gnss_vcc, 0);
+	gpio_pin_set_dt(&gnss_reset, 0);
+	k_msleep(SLEEP_TIME_MMS);
+	gpio_pin_set_dt(&gnss_vbckup, 1);
+	gpio_pin_set_dt(&gnss_vcc, 1);
+	k_msleep(SLEEP_TIME_MS);
+	gpio_pin_set_dt(&gnss_reset, 1);
+	LOG_INF("GNSS is set active.");
 
     int err = uart_configure(uart, &uart_cfg);
 

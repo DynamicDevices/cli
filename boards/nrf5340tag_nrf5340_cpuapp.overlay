@@ -23,39 +23,47 @@
 	aliases {
 		lora0 = &lora;
 	};
+
+	GNSS: zephyr,user {
+		gnss_vbckp_on-gpios = <&gpio0 5 0>;
+		gnss_vcc_on-gpios = <&gpio1 0 0>;
+		gnss_reset-gpios = <&gpio1 6 0>;
+	};
 };
 
 &pinctrl {
 
 	uart0_default: uart0_default {
 		group1 {
-			psels = <NRF_PSEL(UART_TX, 0, 25)>;
+			psels = <NRF_PSEL(UART_TX, 0, 25)>, <NRF_PSEL(UART_RTS, 0, 19)>;
 		};
 		group2 {
-			psels = <NRF_PSEL(UART_RX, 0, 24)>;
+			psels = <NRF_PSEL(UART_RX, 0, 24)>, <NRF_PSEL(UART_CTS, 0, 21)>;
 		};
 	};
 
 	uart0_sleep: uart0_sleep {
 		group1 {
 			psels = <NRF_PSEL(UART_TX, 0, 25)>,
-				<NRF_PSEL(UART_RX, 0, 24)>;
+					<NRF_PSEL(UART_RX, 0, 24)>,
+					<NRF_PSEL(UART_RTS, 0, 19)>,
+					<NRF_PSEL(UART_CTS, 0, 21)>;
 		};
 	};
 
 	spi1_default: spi1_default {
 		group1 {
-			psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
-				<NRF_PSEL(SPIM_MOSI, 0, 9)>,
-				<NRF_PSEL(SPIM_MISO, 0, 10)>;
+			psels = <NRF_PSEL(SPIM_SCK, 0, 20)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 22)>,
+					<NRF_PSEL(SPIM_MISO, 0, 23)>;
 		};
 	};
 
 	spi1_sleep: spi1_sleep {
 		group1 {
-			psels = <NRF_PSEL(SPIM_SCK, 0, 8)>,
-				<NRF_PSEL(SPIM_MOSI, 0, 9)>,
-				<NRF_PSEL(SPIM_MISO, 0, 10)>;
+			psels = <NRF_PSEL(SPIM_SCK, 0, 20)>,
+					<NRF_PSEL(SPIM_MOSI, 0, 22)>,
+					<NRF_PSEL(SPIM_MISO, 0, 23)>;
 		};
 	};
 };
@@ -71,7 +79,7 @@
 &spi1 {
 	compatible = "nordic,nrf-spim";
 	status = "okay";
-	cs-gpios = <&gpio1 15 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpio0 21 GPIO_ACTIVE_LOW>;
 
 	pinctrl-0 = <&spi1_default>;
 	pinctrl-1 = <&spi1_sleep>;
@@ -79,11 +87,17 @@
 	lora: lora@0 {
 		compatible = "semtech,sx1262";
 		reg = <0>;
-		reset-gpios = <&gpio1 1 GPIO_ACTIVE_LOW>;
-		busy-gpios = <&gpio0 19 GPIO_ACTIVE_HIGH>;
-		tx-enable-gpios = <&gpio0 22 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-		rx-enable-gpios = <&gpio0 20 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
-		dio1-gpios = <&gpio0 21 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH) >;
+		reset-gpios = <&gpio1 3 GPIO_ACTIVE_LOW>;
+		busy-gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
+//		tx-enable-gpios = <&gpio0 25 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+//		rx-enable-gpios = <&gpio0 24 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+		dio1-gpios = <&gpio0 6 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH) >;
+        antenna-enable-gpios = <&gpio1 7 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH) >;
 		spi-max-frequency = <125000>;
+	};
+};
+&gpio_fwd {
+	uart {
+		gpios = <&gpio0 11 0>;
 	};
 };
