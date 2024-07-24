@@ -10,7 +10,7 @@
 
 #include <zephyr/drivers/uart.h>
 #include <zephyr/usb/usb_device.h>
-#include <zephyr/drivers/lora.h>
+// #include <zephyr/drivers/lora.h>
 
 #include <openthread/platform/logging.h>
 #include "openthread/instance.h"
@@ -23,7 +23,7 @@
 #include "utils.h"
 #include "mqttsn.h"
 #include "app_bluetooth.h"
-#include "gpio.h"
+// #include "gpio.h"
 
 #if defined(CONFIG_CLI_SAMPLE_LOW_POWER)
 #include "low_power.h"
@@ -76,6 +76,7 @@ int main(int aArgc, char *aArgv[])
 				ret);
 			continue;
 		}
+		LOG_INF("*** Hello Mesh from while!!! ***");
 		k_msleep(100);
 	}
 #endif
@@ -93,7 +94,9 @@ int main(int aArgc, char *aArgv[])
 //    appbluetoothInit();
 
 	// Start MQTT-SN client
-	mqttsnInit();
+	LOG_INF("*** before mqttsnInit ***");
+	// mqttsnInit();
+	LOG_INF("*** after mqttsnInit ***");
 
     return 0;
 }

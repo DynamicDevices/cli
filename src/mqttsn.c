@@ -9,11 +9,11 @@
 #include "openthread/mqttsn.h"
 #include "openthread/link.h"
 
-#include <zephyr/drivers/lora.h>
-#include <zephyr/lorawan/lorawan.h>
+// #include <zephyr/drivers/lora.h>
+// #include <zephyr/lorawan/lorawan.h>
 #include <zephyr/logging/log.h>
 
-#include "gpio.h"
+// #include "gpio.h"
 #include "app_bluetooth.h"
 #include "bluetooth/lns_client.h"
 
@@ -59,6 +59,8 @@ LOG_MODULE_REGISTER(mqttsn, CONFIG_MQTT_SNCLIENT_LOG_LEVEL);
 
 static void mqttsnSubscribedHandler(otMqttsnReturnCode aCode, const otMqttsnTopic* aTopic, otMqttsnQos aQos, void* aContext)
 {
+    LOG_DBG("*** in mqttsnSubscribedHandler ***");
+
  // Handle registered
     if (aCode == kCodeAccepted)
     {
@@ -74,20 +76,28 @@ static void mqttsnSubscribedHandler(otMqttsnReturnCode aCode, const otMqttsnTopi
         else
             LOG_WRN("Subscribed Error Name %s", aTopic->mData.mTopicName);
     }
+
+    LOG_DBG("*** out mqttsnSubscribedHandler ***");
 }
 
 static void mqttsnHandlePublished(otMqttsnReturnCode aCode, void* aContext)
 {
+    LOG_DBG("*** in mqttsnHandlePublished ***");
+
     OT_UNUSED_VARIABLE(aCode);
     OT_UNUSED_VARIABLE(aContext);
 
     // Handle published
     LOG_INF("Published");
-    otLedToggle(LED_YELLOW);
+    //otLedToggle(LED_YELLOW);
+
+    LOG_DBG("*** out mqttsnHandlePublished ***");
 }
 
 static void mqttsnHandleRegistered(otMqttsnReturnCode aCode, const otMqttsnTopic* aTopic, void* aContext)
 {
+    LOG_DBG("*** in mqttsnHandleRegistered ***");
+
     // Handle registered - TODO: Fix support for short topic name
     if (aCode == kCodeAccepted)
     {
@@ -119,7 +129,7 @@ static void mqttsnHandleRegistered(otMqttsnReturnCode aCode, const otMqttsnTopic
 
             // We've done registering the Publication topic now Subscribe to the subscriptitopic
             
-            otLedToggle(LED_YELLOW);
+            //otLedToggle(LED_YELLOW);
             memcpy(&_aTopicPub, aTopic, sizeof(otMqttsnTopic));
 
             // Build topic
@@ -131,29 +141,33 @@ static void mqttsnHandleRegistered(otMqttsnReturnCode aCode, const otMqttsnTopic
             aTopicSub.mData.mTopicName = data;
 
             LOG_DBG("Subscribing to topic: %s", data);
-            otLedToggle(LED_YELLOW);
+            //otLedToggle(LED_YELLOW);
 
             _eMQTTSNClientState = STATE_SUBSCRIBING;
             otMqttsnSubscribe(instance, &aTopicSub, kQos0, mqttsnSubscribedHandler, (void *)instance);
             break;
     }
+
+    LOG_DBG("*** out mqttsnHandleRegistered ***");
 }
 
 static void mqttsnHandleConnected(otMqttsnReturnCode aCode, void* aContext)
 {
+    LOG_DBG("*** in mqttsnHandleConnected ***");
+
     // Handle connected
     otInstance *instance = (otInstance *)aContext;
     if (aCode == kCodeAccepted)
     {
         LOG_DBG("HandleConnected - Accepted");
-        otLedToggle(LED_YELLOW);;
+        //otLedToggle(LED_YELLOW);;
 
         // Build topic
         char data[128];
         sprintf(data, "%s/%s", TOPIC_PREFIX, _eui64);
 
         LOG_DBG("Registering Topic: %s", data);
-        otLedToggle(LED_YELLOW);
+        //otLedToggle(LED_YELLOW);
 
         // Obtain target topic ID
         _eMQTTSNClientState = STATE_REGISTERING_PUB_TOPIC;
@@ -179,10 +193,14 @@ static void mqttsnHandleConnected(otMqttsnReturnCode aCode, void* aContext)
                     break;
         }
     }
+
+    LOG_DBG("*** out mqttsnHandleConnected ***");
 }
 
 static otMqttsnReturnCode mqttsnHandlePublishReceived(const uint8_t* aPayload, int32_t aPayloadLength, const otMqttsnTopic* aTopic, void* aContext)
 {
+    LOG_DBG("*** in mqttsnHandlePublishReceived ***");
+
     char buffer[128];
 
     memset(buffer, 0, sizeof(buffer));
@@ -204,19 +222,24 @@ static otMqttsnReturnCode mqttsnHandlePublishReceived(const uint8_t* aPayload, i
         int cycles = 20;
         while(cycles--)
         {
-            otLedToggle(LED_YELLOW);
+            //otLedToggle(LED_YELLOW);
 	        k_sleep(K_MSEC(250));
         }
     }
+
+    LOG_DBG("*** out mqttsnHandlePublishReceived ***");
+
     return kCodeAccepted;
 }
 
 static void mqttsnHandleSearchGw(const otIp6Address* aAddress, uint8_t aGatewayId, void* aContext)
 {
+    LOG_DBG("*** in mqttsnHandleSearchGw ***");
+
     OT_UNUSED_VARIABLE(aGatewayId);
 
     LOG_DBG("Got search gateway response");
-     otLedToggle(LED_YELLOW);
+    //otLedToggle(LED_YELLOW);
 
     // Handle SEARCHGW response received
     // Connect to received address
@@ -247,25 +270,36 @@ static void mqttsnHandleSearchGw(const otIp6Address* aAddress, uint8_t aGatewayI
 
     // Connect to the MQTT broker (gateway)
     otMqttsnConnect(instance, &config);
+
+    LOG_DBG("*** out mqttsnHandleSearchGw ***");
 }
 
 void mqttsnSearchGateway(otInstance *instance)
 {
+    LOG_DBG("*** in mqttsnSearchGateway ***");
+
     otIp6Address address;
     otIp6AddressFromString(GATEWAY_MULTICAST_ADDRESS, &address);
 
     LOG_DBG("Searching for gateway on %s", GATEWAY_MULTICAST_ADDRESS);
-    otLedToggle(LED_YELLOW);
+    //otLedToggle(LED_YELLOW);
+
+    LOG_DBG("*** calling in mqttsnHandleSearchGw ***");
 
     otMqttsnSetSearchgwHandler(instance, mqttsnHandleSearchGw, (void *)instance);
     // Send SEARCHGW multicast message
+    LOG_DBG("*** Send SEARCHGW multicast ***");
     otMqttsnSearchGateway(instance, &address, GATEWAY_MULTICAST_PORT, GATEWAY_MULTICAST_RADIUS);
+
+    LOG_DBG("*** out mqttsnSearchGateway ***");
 }
 
 void mqttsnPublishWorkHandler(struct k_work *work)
 {
+    LOG_DBG("*** in mqttsnPublishWorkHandler ***");
+
 	LOG_DBG("Publish Handler %d", _stateCount);
-    otLedToggle(LED_YELLOW);
+    //otLedToggle(LED_YELLOW);
 
 	otInstance *instance = openthread_get_default_instance();
     otMqttsnClientState state = otMqttsnGetState(instance);
@@ -299,7 +333,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         static int count = 0;
 
         LOG_DBG("Client state %d", otMqttsnGetState(instance));
-        otLedToggle(LED_YELLOW);
+        //otLedToggle(LED_YELLOW);
 
         // Get RLOC16
         uint16_t uRLOC16 = otLinkGetShortAddress(instance);
@@ -333,7 +367,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         // Publish message to the registered topic
         LOG_INF("Publishing...");
 
-        otLedToggle(LED_YELLOW);
+        //otLedToggle(LED_YELLOW);
  
         const char* strdata = "{\"ID\":\"%s\", \"RLOC16\":\"%04X\", \"Version\":\"%d\", \"Count\":%d, \"Role\":\"%s\", \"Status\":\"%s\", \"Battery\":%d, \"GPSLock\": %d, \"Latitude\":%d, \"Longitude\":%d, \"Elevation\":%d, \"Temperature\":%d.%02u }";
         char data[256];
@@ -357,27 +391,34 @@ void mqttsnPublishWorkHandler(struct k_work *work)
             mqttsnHandlePublished, NULL);
 
         LOG_DBG("Publishing %d bytes rsp %d", length, err);
-        otLedToggle(LED_YELLOW);
+        //otLedToggle(LED_YELLOW);
     }
 
     // Restart timer
     k_timer_start(&mqttsnPublishTimer, K_SECONDS(10), K_NO_WAIT);
+    LOG_DBG("*** out mqttsnPublishWorkHandler ***");
 }
 
 K_WORK_DEFINE(mqttsnPublishWork, mqttsnPublishWorkHandler);
 
 void mqttsnPublishHandler(struct k_timer *dummy)
 {
+    LOG_DBG("*** in mqttsnPublishHandler ***");
+
     k_work_submit(&mqttsnPublishWork);
+
+    LOG_DBG("*** out mqttsnPublishHandler ***");
 }
 
 otError mqttsnInit()
 {
+    LOG_DBG("*** in mqttsnInit ***");
+
     otInstance *instance = openthread_get_default_instance();
 
     // Start MQTT-SN client
     LOG_INF("Starting MQTT-SN on port %d", CLIENT_PORT);
-    otLedToggle(LED_YELLOW);
+    //otLedToggle(LED_YELLOW);
 
     // Store EUI64
     otExtAddress extAddress;
@@ -398,6 +439,8 @@ otError mqttsnInit()
     /* start one shot timer that expires after 10s */
     if(error == OT_ERROR_NONE)
         k_timer_start(&mqttsnPublishTimer, K_SECONDS(10), K_NO_WAIT);
+
+    LOG_DBG("*** out mqttsnInit ***");
 
     return error;
 }

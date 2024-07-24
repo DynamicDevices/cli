@@ -4,7 +4,7 @@
 
 #include <zephyr/drivers/uart.h>
 #include <zephyr/usb/usb_device.h>
-#include <zephyr/drivers/lora.h>
+// #include <zephyr/drivers/lora.h>
 
 #include <openthread/platform/logging.h>
 #include "openthread/instance.h"
@@ -17,7 +17,7 @@
 #include "utils.h"
 #include "mqttsn.h"
 #include "app_bluetooth.h"
-#include "gpio.h"
+// #include "gpio.h"
 
 #if defined(CONFIG_CLI_SAMPLE_LOW_POWER)
 #include "low_power.h"
@@ -33,6 +33,8 @@ LOG_MODULE_REGISTER(openthread_client, CONFIG_OT_COMMAND_LINE_INTERFACE_LOG_LEVE
 
 static void otStateChanged(otChangedFlags aFlags, void *aContext)
 {
+	LOG_INF("*** in otStateChanged ***");
+
     otInstance *instance = (otInstance *)aContext;
 
     // when thread role changed
@@ -40,7 +42,7 @@ static void otStateChanged(otChangedFlags aFlags, void *aContext)
     {
 
       otDeviceRole role = otThreadGetDeviceRole(instance);
-		  otLedRoleIndicator(role);
+		  //otLedRoleIndicator(role);
       switch(role)
       {
           case 0: // OT_DEVICE_ROLE_DISABLED:
@@ -63,7 +65,9 @@ static void otStateChanged(otChangedFlags aFlags, void *aContext)
       // If role changed to any of active roles then send SEARCHGW message
       if (role == OT_DEVICE_ROLE_CHILD || role == OT_DEVICE_ROLE_ROUTER || role == OT_DEVICE_ROLE_LEADER)
       {
-        mqttsnSearchGateway(instance);
+		LOG_INF("*** before calling  mqttsnSearchGateway ***");
+        // mqttsnSearchGateway(instance);
+		LOG_INF("*** after calling  mqttsnSearchGateway ***");
       }
     }
 	else
@@ -166,10 +170,14 @@ static void otStateChanged(otChangedFlags aFlags, void *aContext)
 				break;
 		}
 	}
+
+	LOG_INF("*** out otStateChanged ***");
 }
 
 void openthread_client_thread(void)
 {
+	LOG_INF("*** in openthread_client_thread ***");
+
     #if defined(CONFIG_CLI_SAMPLE_LOW_POWER)
         low_power_enable();
     #endif
@@ -216,7 +224,7 @@ void openthread_client_thread(void)
     #endif
 
         // Start LED
-        otLedInit();
+        //otLedInit();
 
         // Register notifier callback to receive thread role changed events
         error = otSetStateChangedCallback(instance, otStateChanged, instance);
@@ -233,6 +241,8 @@ void openthread_client_thread(void)
         int8_t txpower;
         error = otPlatRadioGetTransmitPower(instance, &txpower);
         LOG_INF("Tx Power is %d dB", txpower);
+
+		LOG_INF("*** out openthread_client_thread ***");
 }
 
 K_THREAD_DEFINE(openthread_client_id, 2048, openthread_client_thread, NULL, NULL, NULL,

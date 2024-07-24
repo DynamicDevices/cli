@@ -82,5 +82,5 @@ source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
 # Configure LoRaWAN Client
 
 module = LORAWAN_CLIENT
-module-str = gps-parser
+module-str = lorawan-client
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"

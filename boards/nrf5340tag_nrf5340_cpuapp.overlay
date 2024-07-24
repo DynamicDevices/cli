@@ -66,6 +66,15 @@
 					<NRF_PSEL(SPIM_MISO, 0, 23)>;
 		};
 	};
+
+	spi2_default: spi2_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 1, 8)>,
+					<NRF_PSEL(SPIM_MOSI, 1, 10)>,
+					<NRF_PSEL(SPIM_MISO, 1, 11)>;
+		};
+	};
+
 };
 	
 &uart0 {
@@ -96,8 +105,27 @@
 		spi-max-frequency = <125000>;
 	};
 };
+
 &gpio_fwd {
 	uart {
 		gpios = <&gpio0 11 0>;
+	};
+};
+
+&spi2 {
+	cs-gpios = <&gpio1 9 0>;
+	status = "okay";
+	pinctrl-0 = <&spi2_default>;
+	pinctrl-names = "default";
+};
+
+/ {
+	nrf21540-fem {
+		compatible = "nordic,nrf21540-fem";
+		tx-en-gpios = <&gpio1 13 GPIO_ACTIVE_HIGH>;
+		rx-en-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+		pdn-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+		mode-gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+		spi-if = <&spi2>;
 	};
 };
