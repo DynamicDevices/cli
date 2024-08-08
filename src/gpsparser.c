@@ -47,8 +47,17 @@ const struct uart_config uart_cfg = {
 #define RX_BUFFER_SIZE MINMEA_MAX_LENGTH
 static volatile bool data_received;
 static int rxdata = 0;
-static char rxbuffer[RX_BUFFER_SIZE];
+static char rxbuffer[RX_BUFFER_SIZE] = {'\0'};
 
+static int fix_type = 0;
+static float latitude = 0.0;
+static float longitude = 0.0;
+static float altitude = 0.0;
+static char altitude_units = '\0';
+static float height = 0.0;
+static char height_units = '\0';
+
+// Functions
 static void uart_fifo_callback(const struct device *dev, void *user_data)
 {
 	ARG_UNUSED(user_data);
@@ -67,17 +76,13 @@ static void uart_fifo_callback(const struct device *dev, void *user_data)
 		/* Verify uart_fifo_read() */
 		uart_fifo_read(dev, &rxchar, 1);
 
-        if(!data_received) {
-            if(rxdata < RX_BUFFER_SIZE) {
-                if ((rxchar == '\n') || (rxchar == '\r')) {
-                    rxbuffer[rxdata] = '\0';
-                    rxdata =0;
-                    data_received = true;
-                } else {
-                    rxbuffer[rxdata++] = rxchar;
-                }
-            }
-        }
+		if(rxchar != '\r') {
+			if(rxchar == '\n') {
+				rxdata = 0;
+			} else {
+				rxbuffer[rxdata++] = rxchar;
+			}
+		}
 	}
 }
 
@@ -95,9 +100,17 @@ void set_callback_gga( GgaHandler handler)
     _ggaHandler = handler;
 }
 
+int gpsparser_getfixtype() { return fix_type; }
+float gpsparser_getlatitude() { return latitude; }
+float gpsparser_getlongitude() { return longitude; }
+float gpsparser_getaltitude() { return altitude; }
+char gpsparser_getaltitudeunits() { return altitude_units; }
+float gpsparser_getheight() { return height; }
+char gpsparser_getheightunits() { return height_units; }
+
 void gpsparser(void)
 {
-    char line[MINMEA_MAX_LENGTH];
+    char line[MINMEA_MAX_LENGTH] = {'\0'};
     int ret;
 
     if (!gpio_is_ready_dt(&gnss_vbckup)) { return; }
@@ -133,153 +146,51 @@ void gpsparser(void)
 		return;
 	}
 
-    /* Verify uart_irq_callback_set() */
+	/* Verify uart_irq_callback_set() */
     uart_irq_callback_set(uart, uart_fifo_callback);
 
     /* Enable Tx/Rx interrupt before using fifo */
     /* Verify uart_irq_rx_enable() */
     uart_irq_rx_enable(uart);
 
-    while(1) {
+	while (1) {
+		k_msleep(10);
+		if(rxbuffer[0] != '\0')  {
+			// LOG_DBG("%s", rxbuffer);
+			switch (minmea_sentence_id(rxbuffer, false)) {
+				case MINMEA_SENTENCE_GGA: {
+					struct minmea_sentence_gga frame;
+					if (minmea_parse_gga(&frame, rxbuffer)) {
+						LOG_DBG("%s", rxbuffer);
 
-        k_msleep(250);
+						LOG_DBG("$xxGGA: fix quality: %d", frame.fix_quality);
+						fix_type = frame.fix_quality;
 
-        data_received = false;
-        while (data_received == false) {
-            /* Allow other thread/workqueue to work. */
-            continue;
-        }
- 
-        strncpy(line, rxbuffer, sizeof(line));
+						LOG_DBG("$xxGGA: latitude: %f", minmea_tocoord(&frame.latitude));
+						latitude = minmea_tocoord(&frame.latitude);
 
-        LOG_INF("Rx: >%s<", line);
-            switch (minmea_sentence_id(line, false)) {
-                case MINMEA_SENTENCE_RMC: {
-                    struct minmea_sentence_rmc frame;
-                    if (minmea_parse_rmc(&frame, line)) {
-#if 0
-                        LOG_DBG(INDENT_SPACES "$xxRMC: raw coordinates and speed: (%d/%d,%d/%d) %d/%d",
-                                frame.latitude.value, frame.latitude.scale,
-                                frame.longitude.value, frame.longitude.scale,
-                                frame.speed.value, frame.speed.scale);
-                        LOG_DBG(INDENT_SPACES "$xxRMC fixed-point coordinates and speed scaled to three decimal places: (%d,%d) %d",
-                                minmea_rescale(&frame.latitude, 1000),
-                                minmea_rescale(&frame.longitude, 1000),
-                                minmea_rescale(&frame.speed, 1000));
-                        LOG_DBG(INDENT_SPACES "$xxRMC floating point degree coordinates and speed: (%f,%f) %f",
-                                minmea_tocoord(&frame.latitude),
-                                minmea_tocoord(&frame.longitude),
-                                minmea_tofloat(&frame.speed));
-#endif
-                        if(_rmcHandler) {
-                            _rmcHandler(frame.valid, 
-                                        minmea_tocoord(&frame.latitude), 
-                                        minmea_tocoord(&frame.longitude), 
-                                        minmea_tofloat(&frame.speed));
-                        }
-                    }
-                    else {
-                        LOG_WRN(INDENT_SPACES "$xxRMC sentence is not parsed");
-                    }
-                } break;
+						LOG_DBG("$xxGGA: longitude: %f", minmea_tocoord(&frame.longitude));
+						longitude = minmea_tocoord(&frame.longitude);
 
-                case MINMEA_SENTENCE_GGA: {
-                    struct minmea_sentence_gga frame;
-                    if (minmea_parse_gga(&frame, line)) {
-                        LOG_DBG(INDENT_SPACES "$xxGGA: fix quality: %d", frame.fix_quality);
+						LOG_DBG("$xxGGA: altitude: (%d/%d)%c", frame.altitude.value, frame.altitude.scale, frame.altitude_units);
+						altitude = (float)frame.altitude.value / (float)frame.altitude.scale;
+						altitude_units = frame.altitude_units;
 
-                        if(_ggaHandler) {
-                            _ggaHandler(minmea_tofloat(&frame.altitude));
-                        }
-                    }
-                    else {
-                        LOG_WRN(INDENT_SPACES "$xxGGA sentence is not parsed");
-                    }
-                } break;
+						LOG_DBG("$xxGGA: height: (%d/%d)%c", frame.height.value, frame.height.scale, frame.height_units);
+						height = (float)frame.height.value / (float)frame.height.scale;
+						height_units = frame.height_units;
+					}
+				} break;
 
-                case MINMEA_SENTENCE_GST: {
-                    struct minmea_sentence_gst frame;
-                    if (minmea_parse_gst(&frame, line)) {
-                        LOG_DBG(INDENT_SPACES "$xxGST: raw latitude,longitude and altitude error deviation: (%d/%d,%d/%d,%d/%d)",
-                                frame.latitude_error_deviation.value, frame.latitude_error_deviation.scale,
-                                frame.longitude_error_deviation.value, frame.longitude_error_deviation.scale,
-                                frame.altitude_error_deviation.value, frame.altitude_error_deviation.scale);
-                        LOG_DBG(INDENT_SPACES "$xxGST fixed point latitude,longitude and altitude error deviation"
-                            " scaled to one decimal place: (%d,%d,%d)",
-                                minmea_rescale(&frame.latitude_error_deviation, 10),
-                                minmea_rescale(&frame.longitude_error_deviation, 10),
-                                minmea_rescale(&frame.altitude_error_deviation, 10));
-                        LOG_DBG(INDENT_SPACES "$xxGST floating point degree latitude, longitude and altitude error deviation: (%f,%f,%f)",
-                                minmea_tofloat(&frame.latitude_error_deviation),
-                                minmea_tofloat(&frame.longitude_error_deviation),
-                                minmea_tofloat(&frame.altitude_error_deviation));
-                    }
-                    else {
-                        LOG_WRN(INDENT_SPACES "$xxGST sentence is not parsed");
-                    }
-                } break;
+				case MINMEA_INVALID:
+					break;
 
-                case MINMEA_SENTENCE_GSV: {
-                    struct minmea_sentence_gsv frame;
-                    if (minmea_parse_gsv(&frame, line)) {
-                        LOG_DBG(INDENT_SPACES "$xxGSV: message %d of %d", frame.msg_nr, frame.total_msgs);
-                        LOG_DBG(INDENT_SPACES "$xxGSV: sattelites in view: %d", frame.total_sats);
-                        for (int i = 0; i < 4; i++)
-                            LOG_DBG(INDENT_SPACES "$xxGSV: sat nr %d, elevation: %d, azimuth: %d, snr: %d dbm",
-                                frame.sats[i].nr,
-                                frame.sats[i].elevation,
-                                frame.sats[i].azimuth,
-                                frame.sats[i].snr);
-                    }
-                    else {
-                        LOG_WRN(INDENT_SPACES "$xxGSV sentence is not parsed");
-                    }
-                } break;
-
-                case MINMEA_SENTENCE_VTG: {
-                struct minmea_sentence_vtg frame;
-                if (minmea_parse_vtg(&frame, line)) {
-                        LOG_DBG(INDENT_SPACES "$xxVTG: true track degrees = %f",
-                            minmea_tofloat(&frame.true_track_degrees));
-                        LOG_DBG(INDENT_SPACES "        magnetic track degrees = %f",
-                            minmea_tofloat(&frame.magnetic_track_degrees));
-                        LOG_DBG(INDENT_SPACES "        speed knots = %f",
-                                minmea_tofloat(&frame.speed_knots));
-                        LOG_DBG(INDENT_SPACES "        speed kph = %f",
-                                minmea_tofloat(&frame.speed_kph));
-                }
-                else {
-                        LOG_WRN(INDENT_SPACES "$xxVTG sentence is not parsed");
-                }
-                } break;
-
-                case MINMEA_SENTENCE_ZDA: {
-                    struct minmea_sentence_zda frame;
-                    if (minmea_parse_zda(&frame, line)) {
-                        LOG_DBG(INDENT_SPACES "$xxZDA: %d:%d:%d %02d.%02d.%d UTC%+03d:%02d",
-                            frame.time.hours,
-                            frame.time.minutes,
-                            frame.time.seconds,
-                            frame.date.day,
-                            frame.date.month,
-                            frame.date.year,
-                            frame.hour_offset,
-                            frame.minute_offset);
-                    }
-                    else {
-                        LOG_WRN(INDENT_SPACES "$xxZDA sentence is not parsed");
-                    }
-                } break;
-
-                case MINMEA_INVALID: {
-                    LOG_WRN(INDENT_SPACES "$xxxxx sentence is not valid");
-                } break;
-
-                default: {
-                    LOG_WRN(INDENT_SPACES "$xxxxx sentence is not parsed");
-                } break;
-            }
-    }
+				default:
+					break;
+			}
+			strncpy(rxbuffer, "", sizeof(rxbuffer));
+		}
+	}
 }
 
 K_THREAD_DEFINE(gpsparser_id, 2048, gpsparser, NULL, NULL, NULL,

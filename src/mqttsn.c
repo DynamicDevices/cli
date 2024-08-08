@@ -16,6 +16,7 @@
 #include "gpio.h"
 #include "app_bluetooth.h"
 #include "bluetooth/lns_client.h"
+#include "gpsparser.h"
 
 #ifdef CONFIG_NRFX_TEMP
 #include <nrfx_temp.h>
@@ -316,45 +317,61 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         whole_celsius = celsius_temperature / 100;
         fraction_celsius = NRFX_ABS(celsius_temperature % 100);
 
-        LOG_INF("Measured temperature: %d.%02u [C]", whole_celsius, fraction_celsius);
+        LOG_DBG("Measured temperature: %d.%02u [C]", whole_celsius, fraction_celsius);
 #endif
 
-        uint32_t latitude = 0;
-        uint32_t longitude = 0;
-        uint32_t elevation = 0;
-
         uint8_t gps_lock = 0;
-
         uint8_t battery = 100;
-
         const char* role = otThreadDeviceRoleToString(otThreadGetDeviceRole(instance));
         char *triage_state = "P1";
 
+        int fix_type = 0;
+        float latitude = 0.0;
+        char latitude_char[16];
+        float longitude = 0.0;
+        char longitude_char[16];
+        float altitude = 0.0;
+        char altitude_char[8];
+        char altitude_units = '\0';
+        float height = 0.0;
+        char height_char[8];
+        char height_units = '\0';
+
+        fix_type = gpsparser_getfixtype();
+        LOG_DBG("Fix Type: %d", fix_type);
+
+        latitude = gpsparser_getlatitude();
+        LOG_DBG("Latitude: %f", latitude);
+
+        longitude = gpsparser_getlongitude();
+        LOG_DBG("Longitude: %f", longitude);
+
+        altitude = gpsparser_getaltitude();
+        altitude_units = gpsparser_getaltitudeunits();
+        LOG_DBG("Altitude: %f%c", altitude, altitude_units);
+
+        height = gpsparser_getheight();
+        height_units = gpsparser_getheightunits();
+        LOG_DBG("Height: %f%c", height, height_units);
+
+        gcvt(latitude, 11, latitude_char);
+        gcvt(longitude, 11, longitude_char);
+        gcvt(altitude, 7, altitude_char);
+        gcvt(height, 7, height_char);
+
         // Publish message to the registered topic
-        LOG_INF("Publishing...");
-
+        LOG_INF("Publishing... %d", count);
         otLedToggle(LED_YELLOW);
- 
-        const char* strdata = "{\"ID\":\"%s\", \"RLOC16\":\"%04X\", \"Version\":\"%d\", \"Count\":%d, \"Role\":\"%s\", \"Status\":\"%s\", \"Battery\":%d, \"GPSLock\": %d, \"Latitude\":%d, \"Longitude\":%d, \"Elevation\":%d, \"Temperature\":%d.%02u }";
-        char data[256];
-        sprintf(data, strdata, _eui64,
-            uRLOC16,
-            VERSION,
-		    count++,
-            role,
-            triage_state, 
-            battery,
-            gps_lock,
-            latitude,
-            longitude,
-            elevation,
-            whole_celsius, fraction_celsius 
-            );
-        
-        int32_t length = strlen(data);
 
-        otError err = otMqttsnPublish(instance, (const uint8_t*)data, length, kQos1, false, &_aTopicPub,
-            mqttsnHandlePublished, NULL);
+        // \"Version\":\"%d\", \"Status\":\"%s\", \"Battery\":%d, \"GPSLock\": %d,
+        // VERSION, triage_state, battery, gps_lock, whole_celsius, fraction_celsius
+        const char* strdata = "{ \"ID\":\"%s\", \"RLOC16\":\"%04X\",  \"Count\":\"%d\", \"Role\":\"%s\", \"Temperature\":\"%d.%02u\", \"Fix Type\":\"%d\", \"Latitude\":\"%s\", \"Longitude\":\"%s\", \"Altitude\":\"%s%c\", \"Height\":\"%s%c\" }";
+        char data[512];
+        sprintf(data, strdata,
+            _eui64, uRLOC16, count++, role, whole_celsius, fraction_celsius,
+            fix_type, latitude_char, longitude_char, altitude_char, altitude_units, height_char, height_units );
+        int32_t length = strlen(data);
+        otError err = otMqttsnPublish(instance, (const uint8_t*)data, length, kQos1, false, &_aTopicPub, mqttsnHandlePublished, NULL);
 
         LOG_DBG("Publishing %d bytes rsp %d", length, err);
         otLedToggle(LED_YELLOW);
