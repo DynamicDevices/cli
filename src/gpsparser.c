@@ -93,13 +93,6 @@ void set_callback_rmc( RmcHandler handler)
     _rmcHandler = handler;
 }
 
-GgaHandler _ggaHandler;
-
-void set_callback_gga( GgaHandler handler)
-{
-    _ggaHandler = handler;
-}
-
 int gpsparser_getfixtype() { return fix_type; }
 float gpsparser_getlatitude() { return latitude; }
 float gpsparser_getlongitude() { return longitude; }
@@ -189,6 +182,8 @@ void gpsparser(void)
 					break;
 			}
 			strncpy(rxbuffer, "", sizeof(rxbuffer));
+		} else {
+			continue;
 		}
 	}
 }

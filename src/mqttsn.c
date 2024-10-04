@@ -84,7 +84,7 @@ static void mqttsnHandlePublished(otMqttsnReturnCode aCode, void* aContext)
 
     // Handle published
     LOG_INF("Published");
-    otLedToggle(LED_YELLOW);
+    // otLedToggle(LED_YELLOW);
 }
 
 static void mqttsnHandleRegistered(otMqttsnReturnCode aCode, const otMqttsnTopic* aTopic, void* aContext)
@@ -120,7 +120,7 @@ static void mqttsnHandleRegistered(otMqttsnReturnCode aCode, const otMqttsnTopic
 
             // We've done registering the Publication topic now Subscribe to the subscriptitopic
             
-            otLedToggle(LED_YELLOW);
+            // otLedToggle(LED_YELLOW);
             memcpy(&_aTopicPub, aTopic, sizeof(otMqttsnTopic));
 
             // Build topic
@@ -132,7 +132,7 @@ static void mqttsnHandleRegistered(otMqttsnReturnCode aCode, const otMqttsnTopic
             aTopicSub.mData.mTopicName = data;
 
             LOG_DBG("Subscribing to topic: %s", data);
-            otLedToggle(LED_YELLOW);
+            // otLedToggle(LED_YELLOW);
 
             _eMQTTSNClientState = STATE_SUBSCRIBING;
             otMqttsnSubscribe(instance, &aTopicSub, kQos0, mqttsnSubscribedHandler, (void *)instance);
@@ -147,14 +147,14 @@ static void mqttsnHandleConnected(otMqttsnReturnCode aCode, void* aContext)
     if (aCode == kCodeAccepted)
     {
         LOG_DBG("HandleConnected - Accepted");
-        otLedToggle(LED_YELLOW);;
+        // otLedToggle(LED_YELLOW);;
 
         // Build topic
         char data[128];
         sprintf(data, "%s/%s", TOPIC_PREFIX, _eui64);
 
         LOG_DBG("Registering Topic: %s", data);
-        otLedToggle(LED_YELLOW);
+        // otLedToggle(LED_YELLOW);
 
         // Obtain target topic ID
         _eMQTTSNClientState = STATE_REGISTERING_PUB_TOPIC;
@@ -205,7 +205,7 @@ static otMqttsnReturnCode mqttsnHandlePublishReceived(const uint8_t* aPayload, i
         int cycles = 20;
         while(cycles--)
         {
-            otLedToggle(LED_YELLOW);
+            // otLedToggle(LED_YELLOW);
 	        k_sleep(K_MSEC(250));
         }
     }
@@ -217,7 +217,7 @@ static void mqttsnHandleSearchGw(const otIp6Address* aAddress, uint8_t aGatewayI
     OT_UNUSED_VARIABLE(aGatewayId);
 
     LOG_DBG("Got search gateway response");
-     otLedToggle(LED_YELLOW);
+    // otLedToggle(LED_YELLOW);
 
     // Handle SEARCHGW response received
     // Connect to received address
@@ -256,7 +256,7 @@ void mqttsnSearchGateway(otInstance *instance)
     otIp6AddressFromString(GATEWAY_MULTICAST_ADDRESS, &address);
 
     LOG_DBG("Searching for gateway on %s", GATEWAY_MULTICAST_ADDRESS);
-    otLedToggle(LED_YELLOW);
+    // otLedToggle(LED_YELLOW);
 
     otMqttsnSetSearchgwHandler(instance, mqttsnHandleSearchGw, (void *)instance);
     // Send SEARCHGW multicast message
@@ -266,7 +266,7 @@ void mqttsnSearchGateway(otInstance *instance)
 void mqttsnPublishWorkHandler(struct k_work *work)
 {
 	LOG_DBG("Publish Handler %d", _stateCount);
-    otLedToggle(LED_YELLOW);
+    // otLedToggle(LED_YELLOW);
 
 	otInstance *instance = openthread_get_default_instance();
     otMqttsnClientState state = otMqttsnGetState(instance);
@@ -300,7 +300,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         static int count = 0;
 
         LOG_DBG("Client state %d", otMqttsnGetState(instance));
-        otLedToggle(LED_YELLOW);
+        // otLedToggle(LED_YELLOW);
 
         // Get RLOC16
         uint16_t uRLOC16 = otLinkGetShortAddress(instance);
@@ -361,20 +361,20 @@ void mqttsnPublishWorkHandler(struct k_work *work)
 
         // Publish message to the registered topic
         LOG_INF("Publishing... %d", count);
-        otLedToggle(LED_YELLOW);
+        // otLedToggle(LED_YELLOW);
 
         // \"Version\":\"%d\", \"Status\":\"%s\", \"Battery\":%d, \"GPSLock\": %d,
         // VERSION, triage_state, battery, gps_lock, whole_celsius, fraction_celsius
-        const char* strdata = "{ \"ID\":\"%s\", \"RLOC16\":\"%04X\",  \"Count\":\"%d\", \"Role\":\"%s\", \"Temperature\":\"%d.%02u\", \"Fix Type\":\"%d\", \"Latitude\":\"%s\", \"Longitude\":\"%s\", \"Altitude\":\"%s%c\", \"Height\":\"%s%c\" }";
+        const char* strdata = "{ \"ID\":\"%s\", \"RLOC16\":\"%04X\",  \"Count\":\"%d\", \"Role\":\"%s\", \"Temperature\":\"%d.%02u\", \"Fix Type\":\"%d\", \"Latitude\":\"%s\", \"Longitude\":\"%s\", \"Altitude\":\"%s\", \"Height\":\"%s\" }";
         char data[512];
         sprintf(data, strdata,
             _eui64, uRLOC16, count++, role, whole_celsius, fraction_celsius,
-            fix_type, latitude_char, longitude_char, altitude_char, altitude_units, height_char, height_units );
+            fix_type, latitude_char, longitude_char, altitude_char, height_char);
         int32_t length = strlen(data);
         otError err = otMqttsnPublish(instance, (const uint8_t*)data, length, kQos1, false, &_aTopicPub, mqttsnHandlePublished, NULL);
 
         LOG_DBG("Publishing %d bytes rsp %d", length, err);
-        otLedToggle(LED_YELLOW);
+        // otLedToggle(LED_YELLOW);
     }
 
     // Restart timer
@@ -394,7 +394,7 @@ otError mqttsnInit()
 
     // Start MQTT-SN client
     LOG_INF("Starting MQTT-SN on port %d", CLIENT_PORT);
-    otLedToggle(LED_YELLOW);
+    // otLedToggle(LED_YELLOW);
 
     // Store EUI64
     otExtAddress extAddress;

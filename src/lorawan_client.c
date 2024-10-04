@@ -52,34 +52,25 @@ static void lorwan_datarate_changed(enum lorawan_datarate dr)
 	LOG_INF("New Datarate: DR_%d, Max Payload %d", dr, max_size);
 }
 
-bool _gnssValid = false;
-float _gnssLatitude = 0.0;
-float _gnssLongitude = 0.0;
-float _gnssElevation = 0.0;
-float _gnssSpeed = 0.0;
+int fix_type = 0;
+float latitude = 0.0;
+float longitude = 0.0;
+float altitude = 0.0;
 
 // TODO: Need a mutex here
 
-void rmc_handler(bool valid, float latitude, float longitude, float speed)
+void rmc_handler(int fix_type, float latitude, float longitude, float altitude)
 {
-	_gnssValid = valid;
-	_gnssLatitude = valid ? latitude : 0.0f;
-	_gnssLongitude = valid ? longitude: 0.0f;
-	_gnssSpeed = valid ? speed : 0.0f;
+	fix_type = gpsparser_getfixtype();
+	latitude = gpsparser_getlatitude();
+	longitude = gpsparser_getlongitude();
+	altitude = gpsparser_getaltitude();
 
-	LOG_INF("Valid: %d, Latitude: %f, Longitude: %f, Speed: %f",
-		valid,
+	LOG_INF("Fix Type: %d, Latitude: %f, Longitude: %f, Altitude: %f",
+		fix_type,
 		latitude,
 		longitude,
-		speed);
-}
-
-void gga_handler(float elevation)
-{
-	_gnssElevation = elevation;
-
-	LOG_INF("Elevation: %f", 
-		elevation);
+		altitude);
 }
 
 int lorawan_client_thread(void)
@@ -94,17 +85,20 @@ int lorawan_client_thread(void)
 	uint8_t dev_eui[8];
 	uint8_t join_eui[8];
 	uint8_t app_key[16];
+	uint8_t nwk_key[16];
 	
 #else
-	uint8_t dev_eui[8];
+	uint8_t dev_eui[] = LORAWAN_DEV_EUI;
+	uint8_t join_eui[] = LORAWAN_JOIN_EUI;
+	uint8_t app_key[] = LORAWAN_APP_KEY;
+	uint8_t nwk_key[] = LORAWAN_NWK_KEY;
+
 
     // Get EUI64
     otInstance *instance;
 	instance = openthread_get_default_instance();
     otLinkGetFactoryAssignedIeeeEui64(instance, (otExtAddress *)&dev_eui);
 
-	uint8_t join_eui[] = LORAWAN_JOIN_EUI;
-	uint8_t app_key[] = LORAWAN_APP_KEY;
 #endif
 
 	
@@ -121,6 +115,8 @@ int lorawan_client_thread(void)
 	nvs_read_init_parameter(&fs, NVS_LORAWAN_DEV_EUI_ID, dev_eui);
 	nvs_read_init_parameter(&fs, NVS_LORAWAN_JOIN_EUI_ID, join_eui);
 	nvs_read_init_parameter(&fs, NVS_LORAWAN_APP_KEY_ID, app_key);
+	nvs_read_init_parameter(&fs, NVS_LORAWAN_NWK_KEY_ID, nwk_key);
+
 #endif
 
 	lora_dev = DEVICE_DT_GET(DT_ALIAS(lora0));
@@ -149,7 +145,7 @@ int lorawan_client_thread(void)
 	join_cfg.dev_eui = dev_eui;
 	join_cfg.otaa.join_eui = join_eui;
 	join_cfg.otaa.app_key = app_key;
-	join_cfg.otaa.nwk_key = app_key;
+	join_cfg.otaa.nwk_key = nwk_key;
 	join_cfg.otaa.dev_nonce = dev_nonce;
 
 	int i = 1;
@@ -186,7 +182,7 @@ int lorawan_client_thread(void)
 		if (bytes_written < 0) {
 			LOG_WRN("NVS: Failed to write id %d (%d)", NVS_DEVNONCE_ID, bytes_written);
 		} else {
-			//printf("NVS: Wrote %d bytes to id %d\n",bytes_written, NVS_DEVNONCE_ID);
+			LOG_DBG("NVS: Wrote %d bytes to id %d",bytes_written, NVS_DEVNONCE_ID);
 		}
 
 		if (ret < 0) {
@@ -204,9 +200,10 @@ int lorawan_client_thread(void)
 	}
 #endif
 
-	int count = 0;
+	int debug_count = 0;
     enum TriageStatus triage_status = P0;
 	int battery_percentage = 100;
+	int accuracy_metres = 5;
 
 	// Set GNSS callback
 	set_callback_rmc(rmc_handler);
@@ -214,39 +211,51 @@ int lorawan_client_thread(void)
 	while (1) {
 
 #define LORAWAN_PORT 2
-#define PAYLOAD_SIZE 16
+#define PAYLOAD_SIZE 19
+
+		fix_type = gpsparser_getfixtype();
+		latitude = gpsparser_getlatitude();
+		longitude = gpsparser_getlongitude();
+		altitude = gpsparser_getaltitude();
+
 		uint8_t payload[PAYLOAD_SIZE];
 
 		// Build test payload format here - keep it similar to OpenThread payload
-        // Byte 0 - \"Version\":\"%s\", 
+        // Byte 0 - version [1]
 		payload[0] = VERSION;
 
-		// Byte 1 - \"Count\":%d, 
-		payload[1] = count++;
+		// Byte 1 - triageStatus [1]
+		payload[1] = triage_status;
 
-		// Byte 2 - \"Status\":\"%s\", 
-		payload[2] = triage_status;
+		// Byte 2 - batteryPercentage [1]
+		payload[2] = battery_percentage;
 
-		// Byte 3 - \"Battery\":%d, 
-		payload[3] = battery_percentage;
+		// Byte 3 - temperature [1]
+		payload[3] = whole_celsius;
 
-		// Byte 4 - Bits - bit0 GPSlock
-		payload[4] = _gnssValid ? 0x01: 0x00;
+		// Byte 4 - fixType [1]
+		payload[4] = fix_type;
 
-		// Byte 5 .. 8 \"Latitude\":%d, 
-		*((float *)&payload[5]) = _gnssLatitude;
+		// Byte 5 .. 8 - latitude [4]
+		*((float *)&payload[5]) = latitude;
 
-		// Byte 9 .. 12 \"Longitude\":%d, 
-		*((float *)&payload[9]) = _gnssLongitude;
+		// Byte 9 .. 12 - longitude [4]
+		*((float *)&payload[9]) = longitude;
 
-		// Byte 13 .. \"Elevation\":%d,
-		payload[13] = (int)_gnssElevation;
+		// Byte 13 .. 16 - altitude [4]
+		*((float *)&payload[13]) = altitude;
 
-		// Byte 14 \"Speed\":%d, 
-		payload[14] = (int)_gnssSpeed;
+		// Byte 17 - accuracyMetres [1]
+		payload[17] = accuracy_metres;
 
-		// Byte 15 - \"Temperature\":%d.%02u }";
-		payload[15] = whole_celsius;
+		// Byte 18 - debugCount [1]
+		payload[18] = debug_count++;
+
+		LOG_INF("*** Fix Type: %d, Latitude: %f, Longitude: %f, Altitude: %f ***",
+				fix_type,
+				latitude,
+				longitude,
+				altitude );
 
 		ret = lorawan_send(LORAWAN_PORT, payload, PAYLOAD_SIZE, LORAWAN_MSG_UNCONFIRMED);
 		if (ret == -EAGAIN) {

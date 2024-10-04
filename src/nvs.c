@@ -83,6 +83,7 @@ void nvs_read_init_parameter(struct nvs_fs *fs, uint16_t id, void *data)
 			case NVS_LORAWAN_DEV_EUI_ID:
 			case NVS_LORAWAN_JOIN_EUI_ID:
 			case NVS_LORAWAN_APP_KEY_ID:
+			case NVS_LORAWAN_NWK_KEY_ID:
 				for (int i = 0; i < nvs_len[id]; i++)
 					LOG_INF("- %02X ",array[i]);
 				break;

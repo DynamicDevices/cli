@@ -3,13 +3,9 @@
 
 #include "minmea.h"
 
-typedef void (*RmcHandler)(bool valid, float latitude, float longitude, float speed);
+typedef void (*RmcHandler)(int fix_type, float latitude, float longitude, float altitude);
 
 void set_callback_rmc(RmcHandler handler);
-
-typedef void (*GgaHandler)(float elevation);
-
-void set_callback_gga(GgaHandler handler);
 
 int gpsparser_getfixtype();
 float gpsparser_getlatitude();
