@@ -11,8 +11,5 @@ int gpsparser_getfixtype();
 float gpsparser_getlatitude();
 float gpsparser_getlongitude();
 float gpsparser_getaltitude();
-char gpsparser_getaltitudeunits();
-float gpsparser_getheight();
-char gpsparser_getheightunits();
 
 #endif

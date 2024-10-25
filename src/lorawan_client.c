@@ -65,12 +65,6 @@ void rmc_handler(int fix_type, float latitude, float longitude, float altitude)
 	latitude = gpsparser_getlatitude();
 	longitude = gpsparser_getlongitude();
 	altitude = gpsparser_getaltitude();
-
-	LOG_INF("Fix Type: %d, Latitude: %f, Longitude: %f, Altitude: %f",
-		fix_type,
-		latitude,
-		longitude,
-		altitude);
 }
 
 int lorawan_client_thread(void)
@@ -88,7 +82,7 @@ int lorawan_client_thread(void)
 	uint8_t nwk_key[16];
 	
 #else
-	uint8_t dev_eui[] = LORAWAN_DEV_EUI;
+	uint8_t dev_eui[8];
 	uint8_t join_eui[] = LORAWAN_JOIN_EUI;
 	uint8_t app_key[] = LORAWAN_APP_KEY;
 	uint8_t nwk_key[] = LORAWAN_NWK_KEY;
@@ -250,12 +244,6 @@ int lorawan_client_thread(void)
 
 		// Byte 18 - debugCount [1]
 		payload[18] = debug_count++;
-
-		LOG_INF("*** Fix Type: %d, Latitude: %f, Longitude: %f, Altitude: %f ***",
-				fix_type,
-				latitude,
-				longitude,
-				altitude );
 
 		ret = lorawan_send(LORAWAN_PORT, payload, PAYLOAD_SIZE, LORAWAN_MSG_UNCONFIRMED);
 		if (ret == -EAGAIN) {

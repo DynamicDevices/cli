@@ -53,9 +53,6 @@ static int fix_type = 0;
 static float latitude = 0.0;
 static float longitude = 0.0;
 static float altitude = 0.0;
-static char altitude_units = '\0';
-static float height = 0.0;
-static char height_units = '\0';
 
 // Functions
 static void uart_fifo_callback(const struct device *dev, void *user_data)
@@ -97,14 +94,15 @@ int gpsparser_getfixtype() { return fix_type; }
 float gpsparser_getlatitude() { return latitude; }
 float gpsparser_getlongitude() { return longitude; }
 float gpsparser_getaltitude() { return altitude; }
-char gpsparser_getaltitudeunits() { return altitude_units; }
-float gpsparser_getheight() { return height; }
-char gpsparser_getheightunits() { return height_units; }
 
 void gpsparser(void)
 {
     char line[MINMEA_MAX_LENGTH] = {'\0'};
     int ret;
+	char *rx_buf;
+	char gst_buf[32];
+	uint8_t gst_checksum;
+	bool gst_checksum_success;
 
     if (!gpio_is_ready_dt(&gnss_vbckup)) { return; }
 	if (!gpio_is_ready_dt(&gnss_vcc)) { return; }
@@ -154,7 +152,7 @@ void gpsparser(void)
 				case MINMEA_SENTENCE_GGA: {
 					struct minmea_sentence_gga frame;
 					if (minmea_parse_gga(&frame, rxbuffer)) {
-						LOG_DBG("%s", rxbuffer);
+						LOG_DBG("$xxGGA: %s", rxbuffer);
 
 						LOG_DBG("$xxGGA: fix quality: %d", frame.fix_quality);
 						fix_type = frame.fix_quality;
@@ -165,13 +163,21 @@ void gpsparser(void)
 						LOG_DBG("$xxGGA: longitude: %f", minmea_tocoord(&frame.longitude));
 						longitude = minmea_tocoord(&frame.longitude);
 
-						LOG_DBG("$xxGGA: altitude: (%d/%d)%c", frame.altitude.value, frame.altitude.scale, frame.altitude_units);
-						altitude = (float)frame.altitude.value / (float)frame.altitude.scale;
-						altitude_units = frame.altitude_units;
+						LOG_DBG("$xxGGA: altitude: %f", minmea_tofloat(&frame.altitude));
+						altitude =  minmea_tofloat(&frame.altitude);
+					}
+				} break;
 
-						LOG_DBG("$xxGGA: height: (%d/%d)%c", frame.height.value, frame.height.scale, frame.height_units);
-						height = (float)frame.height.value / (float)frame.height.scale;
-						height_units = frame.height_units;
+				case MINMEA_SENTENCE_GST: {
+					struct minmea_sentence_gst frame;
+					if (minmea_parse_gst(&frame, rxbuffer)) {
+						LOG_DBG("$xxGST: %s", rxbuffer);
+
+						LOG_DBG("$xxGST:  latitude error deviation: %f", minmea_tofloat(&frame.latitude_error_deviation));
+
+						LOG_DBG("$xxGST:  longitude error deviation: %f", minmea_tofloat(&frame.longitude_error_deviation));
+
+						LOG_DBG("$xxGST:  altitude error deviation: %f", minmea_tofloat(&frame.altitude_error_deviation));
 					}
 				} break;
 
