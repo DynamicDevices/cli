@@ -144,6 +144,41 @@ void gpsparser(void)
     /* Verify uart_irq_rx_enable() */
     uart_irq_rx_enable(uart);
 
+	// uart_irq_tx_enable(uart);
+	// ret = uart_irq_tx_ready(uart);
+	// if (ret > 0 )
+		// LOG_DBG("\n tx_enbale success \n");
+	// else if (ret == 0)
+		// LOG_DBG("\ndevice is not ready to write a new byte\n");
+	// else
+		// LOG_DBG("\n tx_enbale failed \n");
+
+	gst_checksum = minmea_checksum("$PAIR062,8,1*");
+	LOG_DBG("$xxGST sentence checksum value: %2x", gst_checksum);
+	sprintf(gst_buf, "$PAIR062,8,1*%02x\r\n", gst_checksum);
+	gst_checksum_success = minmea_check(gst_buf, true);
+	if (gst_checksum_success)
+		LOG_DBG("$xxGST sentence checksum check success");
+	else
+		LOG_DBG("$xxGST sentence checksum check fail");
+	k_msleep(3000);
+
+	// uart_rx_enable(uart, rx_buf, strlen(rx_buf), SYS_FOREVER_US);
+	// if (ret == 0)
+		// LOG_DBG("\nuart_rx_enable success\n");
+	// else
+		// LOG_DBG("\nuart_rx_enable fail: %d\n", ret);
+
+	ret = uart_tx(uart, gst_buf, strlen(gst_buf), SYS_FOREVER_US);
+	if (ret == 0)
+		LOG_DBG("\nPAIR062 send success\n");
+	else if (ret == 'ENOTSUP')
+		LOG_DBG("\nPAIR062 send fail: API is not enabled.\n");
+	else if (ret == 'EBUSY')
+		LOG_DBG("\nPAIR062 send fail: There is already an ongoing transfer.\n");
+	else
+		LOG_DBG("\nPAIR062 send fail: %d\n", ret);
+
 	while (1) {
 		k_msleep(10);
 		if(rxbuffer[0] != '\0')  {
