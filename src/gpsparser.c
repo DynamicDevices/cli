@@ -16,6 +16,7 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/ring_buffer.h>
 
 #include "gpsparser.h"
 
@@ -34,9 +35,9 @@ const struct gpio_dt_spec gnss_vbckup = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnss_
 const struct gpio_dt_spec gnss_vcc = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnss_vcc_on_gpios);
 const struct gpio_dt_spec gnss_reset = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnss_reset_gpios);
 
-const struct device *uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
+const struct device *uart = DEVICE_DT_GET(DT_NODELABEL(uart2));
 
-const struct uart_config uart_cfg = {
+struct uart_config uart_cfg = {
 		.baudrate = 115200,
 		.parity = UART_CFG_PARITY_NONE,
 		.stop_bits = UART_CFG_STOP_BITS_1,
@@ -44,42 +45,65 @@ const struct uart_config uart_cfg = {
 		.flow_ctrl = UART_CFG_FLOW_CTRL_NONE
 	};
 
-#define RX_BUFFER_SIZE MINMEA_MAX_LENGTH
-static volatile bool data_received;
-static int rxdata = 0;
-static char rxbuffer[RX_BUFFER_SIZE] = {'\0'};
+#define RX_TIMEOUT_MS 10
+#define RX_BUFFERS 2
+#define RX_BUFFER_SIZE 16
+static char rxbuffer[2*RX_BUFFER_SIZE] = {'\0'};
+K_SEM_DEFINE(sem_rx_data, 0, 1);
+#define MAX_RING_BUF_BYTES 128
+RING_BUF_DECLARE(ring_buf_rx_data, MAX_RING_BUF_BYTES);
 
 static int fix_type = 0;
 static float latitude = 0.0;
 static float longitude = 0.0;
 static float altitude = 0.0;
 
-// Functions
-static void uart_fifo_callback(const struct device *dev, void *user_data)
+static void uart_cb(const struct device *dev, struct uart_event *evt, void *user_data)
 {
-	ARG_UNUSED(user_data);
+	static int buffer_index = 0;
+    static bool is_overflowing = false;
 
-    char rxchar;
+	switch (evt->type) {
+	case UART_TX_DONE:
+		// do something
+		break;
 
-	/* Verify uart_irq_update() */
-	if (!uart_irq_update(dev)) {
-		LOG_ERR("retval should always be 1");
-		return;
-	}
+	case UART_TX_ABORTED:
+		// do something
+		break;
 
-	/* Verify uart_irq_rx_ready() */
-	while(uart_irq_rx_ready(dev)) {
-
-		/* Verify uart_fifo_read() */
-		uart_fifo_read(dev, &rxchar, 1);
-
-		if(rxchar != '\r') {
-			if(rxchar == '\n') {
-				rxdata = 0;
-			} else {
-				rxbuffer[rxdata++] = rxchar;
+	case UART_RX_RDY:
+//		LOG_DBG("Buff %d Rx %d bytes at offset %d", buffer_index, evt->data.rx.len, evt->data.rx.offset);
+		int ret = ring_buf_put(&ring_buf_rx_data, &evt->data.rx.buf[evt->data.rx.offset], evt->data.rx.len);
+		if(ret != evt->data.rx.len) {
+            if(!is_overflowing) {
+				LOG_WRN("Rx data buffer overflow");
+				is_overflowing = true;
 			}
+		} else {
+			is_overflowing = false;
 		}
+
+		// TODO: For now tell the parser we have any new data. We could optimise this by only waking the parser when we get an EOL
+		k_sem_give(&sem_rx_data);
+		break;
+
+	case UART_RX_BUF_REQUEST:
+		buffer_index = (1+buffer_index) % RX_BUFFERS;
+		uart_rx_buf_rsp(dev, (uint8_t *)&rxbuffer[buffer_index*RX_BUFFER_SIZE], RX_BUFFER_SIZE);
+		break;
+
+	case UART_RX_BUF_RELEASED:
+		break;
+
+	case UART_RX_DISABLED:
+		break;
+
+	case UART_RX_STOPPED:
+		break;
+
+	default:
+		break;
 	}
 }
 
@@ -97,12 +121,11 @@ float gpsparser_getaltitude() { return altitude; }
 
 void gpsparser(void)
 {
-    char line[MINMEA_MAX_LENGTH] = {'\0'};
     int ret;
-	char *rx_buf;
 	char gst_buf[32];
 	uint8_t gst_checksum;
 	bool gst_checksum_success;
+	bool initialised_gnss = false;
 
     if (!gpio_is_ready_dt(&gnss_vbckup)) { return; }
 	if (!gpio_is_ready_dt(&gnss_vcc)) { return; }
@@ -130,64 +153,93 @@ void gpsparser(void)
 	gpio_pin_set_dt(&gnss_reset, 1);
 	LOG_INF("GNSS is set active.");
 
-    int err = uart_configure(uart, &uart_cfg);
-
-	if (err == -ENOSYS) {
-        LOG_ERR("Can't open uart");
+    if(!device_is_ready(uart)) {
+       LOG_ERR("UART not ready");
 		return;
 	}
 
-	/* Verify uart_irq_callback_set() */
-    uart_irq_callback_set(uart, uart_fifo_callback);
+    int err = uart_configure(uart, &uart_cfg);
 
-    /* Enable Tx/Rx interrupt before using fifo */
-    /* Verify uart_irq_rx_enable() */
-    uart_irq_rx_enable(uart);
+	if (err == -ENOSYS) {
+        LOG_ERR("Can't configure uart");
+		return;
+	}
 
-	// uart_irq_tx_enable(uart);
-	// ret = uart_irq_tx_ready(uart);
-	// if (ret > 0 )
-		// LOG_DBG("\n tx_enbale success \n");
-	// else if (ret == 0)
-		// LOG_DBG("\ndevice is not ready to write a new byte\n");
-	// else
-		// LOG_DBG("\n tx_enbale failed \n");
+    err = uart_callback_set(uart, uart_cb, NULL);
+	if(err ) {
+		LOG_ERR("Couldn't set UART callback");
+		return;
+	}
+
+	uart_rx_enable(uart, (uint8_t *)rxbuffer, sizeof(rxbuffer), RX_TIMEOUT_MS);
+	if (ret == 0) {
+		LOG_DBG("\nuart_rx_enable success\n");
+	}  else
+		LOG_WRN("\nuart_rx_enable fail: %d\n", ret);
 
 	gst_checksum = minmea_checksum("$PAIR062,8,1*");
-	LOG_DBG("$xxGST sentence checksum value: %2x", gst_checksum);
 	sprintf(gst_buf, "$PAIR062,8,1*%02x\r\n", gst_checksum);
 	gst_checksum_success = minmea_check(gst_buf, true);
+
 	if (gst_checksum_success)
 		LOG_DBG("$xxGST sentence checksum check success");
 	else
-		LOG_DBG("$xxGST sentence checksum check fail");
-	k_msleep(3000);
+		LOG_WRN("$xxGST sentence checksum check fail");
 
-	// uart_rx_enable(uart, rx_buf, strlen(rx_buf), SYS_FOREVER_US);
-	// if (ret == 0)
-		// LOG_DBG("\nuart_rx_enable success\n");
-	// else
-		// LOG_DBG("\nuart_rx_enable fail: %d\n", ret);
-
-	ret = uart_tx(uart, gst_buf, strlen(gst_buf), SYS_FOREVER_US);
-	if (ret == 0)
-		LOG_DBG("\nPAIR062 send success\n");
-	else if (ret == 'ENOTSUP')
-		LOG_DBG("\nPAIR062 send fail: API is not enabled.\n");
-	else if (ret == 'EBUSY')
-		LOG_DBG("\nPAIR062 send fail: There is already an ongoing transfer.\n");
-	else
-		LOG_DBG("\nPAIR062 send fail: %d\n", ret);
+	#define MAX_GPS_LINE_LEN 64
 
 	while (1) {
-		k_msleep(10);
-		if(rxbuffer[0] != '\0')  {
-			// LOG_DBG("%s", rxbuffer);
-			switch (minmea_sentence_id(rxbuffer, false)) {
+		if(k_sem_take(&sem_rx_data, K_MSEC(50)) == 0) {
+
+			static char gpsline[MAX_GPS_LINE_LEN+1] = { 0 };
+			static int gpslinelen = 0;
+			int bytes;
+			bool eol = false;
+
+			// We have some data. Pull it out of the ring buffer
+			do {
+				bytes = ring_buf_get(&ring_buf_rx_data, &gpsline[gpslinelen], 1);
+				if(bytes > 0) {
+					eol = gpsline[gpslinelen] == '\n';
+					// Drop EOLs
+					if(gpsline[gpslinelen] != '\r' && gpsline[gpslinelen] != '\n')
+					gpslinelen++;
+				}
+				// LOG_DBG("Bytes: %d, Data: %02X, gpslinelen %d, eol %d", bytes, gpsline[gpslinelen-1], gpslinelen, eol);
+			} while( gpslinelen < MAX_GPS_LINE_LEN && bytes > 0 && !eol);
+
+			// Have we got a complete line ?
+			if(!eol)
+				continue;
+
+			gpsline[gpslinelen] = '\0';
+			LOG_DBG("GPS Line: %s (%d), gpslinelen %d", gpsline, strlen(gpsline), gpslinelen);
+
+			// Reset index
+			gpslinelen = 0;
+
+			// Check if the GNSS is up so we can do our setup
+			if(!initialised_gnss && !strncmp(gpsline, "$G", 2))
+			{
+				{
+					ret = uart_tx(uart, gst_buf, strlen(gst_buf), SLEEP_TIME_MS);
+					if (ret == 0)
+						LOG_DBG("\nPAIR062 send success\n");
+					else
+						LOG_WRN("\nPAIR062 send fail: %d\n", ret);
+					initialised_gnss = true;
+				}
+			}
+
+			LOG_DBG("> %s", (char *)gpsline);
+			switch (minmea_sentence_id(gpsline, false)) {
 				case MINMEA_SENTENCE_GGA: {
 					struct minmea_sentence_gga frame;
-					if (minmea_parse_gga(&frame, rxbuffer)) {
-						LOG_DBG("$xxGGA: %s", rxbuffer);
+
+					LOG_DBG("Got GGA");
+
+					if (minmea_parse_gga(&frame, (char *)gpsline)) {
+						LOG_DBG("$xxGGA: %s", (char *)gpsline);
 
 						LOG_DBG("$xxGGA: fix quality: %d", frame.fix_quality);
 						fix_type = frame.fix_quality;
@@ -205,8 +257,8 @@ void gpsparser(void)
 
 				case MINMEA_SENTENCE_GST: {
 					struct minmea_sentence_gst frame;
-					if (minmea_parse_gst(&frame, rxbuffer)) {
-						LOG_DBG("$xxGST: %s", rxbuffer);
+					if (minmea_parse_gst(&frame, (char *)gpsline)) {
+						LOG_DBG("$xxGST: %s", (char *)gpsline);
 
 						LOG_DBG("$xxGST:  latitude error deviation: %f", minmea_tofloat(&frame.latitude_error_deviation));
 
@@ -222,12 +274,11 @@ void gpsparser(void)
 				default:
 					break;
 			}
-			strncpy(rxbuffer, "", sizeof(rxbuffer));
 		} else {
 			continue;
 		}
 	}
 }
 
-K_THREAD_DEFINE(gpsparser_id, 2048, gpsparser, NULL, NULL, NULL,
+K_THREAD_DEFINE(gpsparser_id, 4096, gpsparser, NULL, NULL, NULL,
 		7, 0, 0);
