@@ -14,6 +14,9 @@
 #include <stdarg.h>
 #include <time.h>
 
+#include <zephyr/logging/log.h>
+LOG_MODULE_REGISTER(lorawan_client, CONFIG_LORAWAN_CLIENT_LOG_LEVEL);
+
 #define boolstr(s) ((s) ? "true" : "false")
 
 static int hex2int(char c)
@@ -351,8 +354,8 @@ bool minmea_talker_id(char talker[3], const char *sentence)
 
 enum minmea_sentence_id minmea_sentence_id(const char *sentence, bool strict)
 {
-    if (!minmea_check(sentence, strict))
-        return MINMEA_INVALID;
+    // if (!minmea_check(sentence, strict))
+    //     return MINMEA_INVALID;
 
     char type[6];
     if (!minmea_scan(sentence, "t", type))
@@ -415,7 +418,27 @@ bool minmea_parse_gga(struct minmea_sentence_gga *frame, const char *sentence)
     int latitude_direction;
     int longitude_direction;
 
-    if (!minmea_scan(sentence, "tTfdfdiiffcfcf_",
+    LOG_DBG("A");
+
+    // if (!minmea_scan(sentence, "tTfdfdiiffcfcf_",
+    //         type,
+    //         &frame->time,
+    //         &frame->latitude, &latitude_direction,
+    //         &frame->longitude, &longitude_direction,
+    //         &frame->fix_quality,
+    //         &frame->satellites_tracked,
+    //         &frame->hdop,
+    //         &frame->altitude, &frame->altitude_units,
+    //         &frame->height, &frame->height_units,
+    //         &frame->dgps_age))
+    //     return false;
+    // if (strcmp(type+2, "GGA"))
+    //     return false;
+
+    // frame->latitude.value *= latitude_direction;
+    // frame->longitude.value *= longitude_direction;
+
+    if (!minmea_scan(sentence, "tTfdfdiifcf_",
             type,
             &frame->time,
             &frame->latitude, &latitude_direction,
@@ -423,15 +446,26 @@ bool minmea_parse_gga(struct minmea_sentence_gga *frame, const char *sentence)
             &frame->fix_quality,
             &frame->satellites_tracked,
             &frame->hdop,
-            &frame->altitude, &frame->altitude_units,
-            &frame->height, &frame->height_units,
-            &frame->dgps_age))
+            &frame->height_units,
+            &frame->dgps_age)) {
+
+        LOG_DBG("B");
+
         return false;
-    if (strcmp(type+2, "GGA"))
+    }
+    if (strcmp(type+2, "GGA")) {
+
+        LOG_DBG("C");
+
         return false;
+    }
+
+    LOG_DBG("D");
 
     frame->latitude.value *= latitude_direction;
     frame->longitude.value *= longitude_direction;
+
+    LOG_DBG("E");
 
     return true;
 }

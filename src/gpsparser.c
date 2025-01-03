@@ -250,8 +250,8 @@ void gpsparser(void)
 						LOG_DBG("$xxGGA: longitude: %f", minmea_tocoord(&frame.longitude));
 						longitude = minmea_tocoord(&frame.longitude);
 
-						LOG_DBG("$xxGGA: altitude: %f", minmea_tofloat(&frame.altitude));
-						altitude =  minmea_tofloat(&frame.altitude);
+						// LOG_DBG("$xxGGA: altitude: %f", minmea_tofloat(&frame.altitude));
+						// altitude =  minmea_tofloat(&frame.altitude);
 					}
 				} break;
 
