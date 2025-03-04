@@ -30,7 +30,9 @@
 
 #include "lorawan_client.h"
 
-#define DELAY K_SECONDS(30)
+//#define DELAY K_SECONDS(30)
+#warning DEBUG - FAST DELAY INCLUDING 8s for LoRa OTA send
+#define DELAY K_SECONDS((10-8))
 
 LOG_MODULE_REGISTER(lorawan_client, CONFIG_LORAWAN_CLIENT_LOG_LEVEL);
 
@@ -245,6 +247,7 @@ int lorawan_client_thread(void)
 		// Byte 18 - debugCount [1]
 		payload[18] = debug_count++;
 
+		// TODO: Need to have a look at this. It seems to take 7-8s to send a message
 		ret = lorawan_send(LORAWAN_PORT, payload, PAYLOAD_SIZE, LORAWAN_MSG_UNCONFIRMED);
 		if (ret == -EAGAIN) {
 			LOG_ERR("lorawan_send failed: %d. Continuing...", ret);
@@ -255,9 +258,14 @@ int lorawan_client_thread(void)
 //			return -1;
 		}
 		else {
-			LOG_INF("Data sent!");
+			LOG_INF("Data sent! (count %d)", debug_count);
 		}
+
 		k_sleep(DELAY);
+
+#warning Changing triage status for debugging
+		if(++triage_status >= P3)
+			triage_status = P0;
 	}
 
 	return 0;
