@@ -7,9 +7,10 @@ typedef void (*RmcHandler)(int fix_type, float latitude, float longitude, float 
 
 void set_callback_rmc(RmcHandler handler);
 
-int gpsparser_getfixtype();
-float gpsparser_getlatitude();
-float gpsparser_getlongitude();
-float gpsparser_getaltitude();
+int gpsparser_fixtype();
+float gpsparser_latitude();
+float gpsparser_longitude();
+float gpsparser_altitude();
+float gpsparser_rms_deviation();
 
 #endif

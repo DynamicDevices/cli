@@ -53,6 +53,7 @@ static int fix_type = 0;
 static float latitude = 0.0;
 static float longitude = 0.0;
 static float altitude = 0.0;
+static float rms_deviation = 5.0;
 
 // Functions
 static void uart_fifo_callback(const struct device *dev, void *user_data)
@@ -90,10 +91,24 @@ void set_callback_rmc( RmcHandler handler)
     _rmcHandler = handler;
 }
 
-int gpsparser_getfixtype() { return fix_type; }
-float gpsparser_getlatitude() { return latitude; }
-float gpsparser_getlongitude() { return longitude; }
-float gpsparser_getaltitude() { return altitude; }
+void tx_nmea_cmd(const char *cmd)
+{
+	char nmea_buf[32];
+	int gst_checksum = minmea_checksum(cmd);
+	
+	sprintf(nmea_buf, "$s%02x\r\n", cmd, gst_checksum);
+	
+	int i = 0;
+	while(nmea_buf[i] != '\0') {
+		uart_poll_out(uart, nmea_buf[i++]);
+	}
+}
+
+int gpsparser_fixtype() { return fix_type; }
+float gpsparser_latitude() { return latitude; }
+float gpsparser_longitude() { return longitude; }
+float gpsparser_altitude() { return altitude; }
+float gpsparser_rms_deviation() { return rms_deviation; }
 
 void gpsparser(void)
 {
@@ -144,6 +159,16 @@ void gpsparser(void)
     /* Verify uart_irq_rx_enable() */
     uart_irq_rx_enable(uart);
 
+	k_msleep(3000);
+
+	gst_checksum = minmea_checksum("$PAIR062,8,1*");
+	sprintf(gst_buf, "$PAIR062,8,1*%02x\r\n", gst_checksum);
+	gst_checksum_success = minmea_check(gst_buf, true);
+	int i = 0;
+	while(gst_buf[i] != '\0') {
+		uart_poll_out(uart, gst_buf[i++]);
+	}
+
 	while (1) {
 		k_msleep(10);
 		if(rxbuffer[0] != '\0')  {
@@ -172,6 +197,9 @@ void gpsparser(void)
 					struct minmea_sentence_gst frame;
 					if (minmea_parse_gst(&frame, rxbuffer)) {
 						LOG_DBG("$xxGST: %s", rxbuffer);
+
+						LOG_DBG("$xxGST:  rms error deviation: %f", minmea_tofloat(&frame.rms_deviation));
+						rms_deviation = minmea_tofloat(&frame.rms_deviation);
 
 						LOG_DBG("$xxGST:  latitude error deviation: %f", minmea_tofloat(&frame.latitude_error_deviation));
 

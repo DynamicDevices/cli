@@ -58,15 +58,17 @@ int fix_type = 0;
 float latitude = 0.0;
 float longitude = 0.0;
 float altitude = 0.0;
+float rms_deviation = 0.0;
 
 // TODO: Need a mutex here
 
 void rmc_handler(int fix_type, float latitude, float longitude, float altitude)
 {
-	fix_type = gpsparser_getfixtype();
-	latitude = gpsparser_getlatitude();
-	longitude = gpsparser_getlongitude();
-	altitude = gpsparser_getaltitude();
+	fix_type = gpsparser_fixtype();
+	latitude = gpsparser_latitude();
+	longitude = gpsparser_longitude();
+	altitude = gpsparser_altitude();
+	rms_deviation = gpsparser_rms_deviation();
 }
 
 int lorawan_client_thread(void)
@@ -199,7 +201,6 @@ int lorawan_client_thread(void)
 	int debug_count = 0;
     enum TriageStatus triage_status = P0;
 	int battery_percentage = 100;
-	int accuracy_metres = 5;
 
 	// Set GNSS callback
 	set_callback_rmc(rmc_handler);
@@ -209,10 +210,11 @@ int lorawan_client_thread(void)
 #define LORAWAN_PORT 2
 #define PAYLOAD_SIZE 19
 
-		fix_type = gpsparser_getfixtype();
-		latitude = gpsparser_getlatitude();
-		longitude = gpsparser_getlongitude();
-		altitude = gpsparser_getaltitude();
+		fix_type = gpsparser_fixtype();
+		latitude = gpsparser_latitude();
+		longitude = gpsparser_longitude();
+		altitude = gpsparser_altitude();
+		rms_deviation = gpsparser_rms_deviation();
 
 		uint8_t payload[PAYLOAD_SIZE];
 
@@ -242,7 +244,7 @@ int lorawan_client_thread(void)
 		*((float *)&payload[13]) = altitude;
 
 		// Byte 17 - accuracyMetres [1]
-		payload[17] = accuracy_metres;
+		payload[17] = (char)rms_deviation;
 
 		// Byte 18 - debugCount [1]
 		payload[18] = debug_count++;

@@ -323,6 +323,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         enum TriageStatus triage_status = P0;
         int battery_percentage = 100;
         int accuracy_metres = 5;
+        char accuracy_metres_char[8];
         int fix_type = 0;
         float latitude = 0.0;
         char latitude_char[16];
@@ -331,21 +332,25 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         float altitude = 0.0;
         char altitude_char[8];
 
-        fix_type = gpsparser_getfixtype();
+        fix_type = gpsparser_fixtype();
         LOG_DBG("Fix Type: %d", fix_type);
 
-        latitude = gpsparser_getlatitude();
+        latitude = gpsparser_latitude();
         LOG_DBG("Latitude: %f", latitude);
 
-        longitude = gpsparser_getlongitude();
+        longitude = gpsparser_longitude();
         LOG_DBG("Longitude: %f", longitude);
 
-        altitude = gpsparser_getaltitude();
+        altitude = gpsparser_altitude();
         LOG_DBG("Altitude: %f", altitude);
+
+        accuracy_metres = gpsparser_rms_deviation();
+        LOG_DBG("RMS Deviation: %f", accuracy_metres);
 
         gcvt(latitude, 11, latitude_char);
         gcvt(longitude, 11, longitude_char);
         gcvt(altitude, 7, altitude_char);
+        gcvt(accuracy_metres, 7, accuracy_metres_char);
 
         // Publish message to the registered topic
         LOG_INF("Publishing... %d", debug_count);
