@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// INSTGateway-Dev ->        EUI: 0016C001F152FD00
-#define LORAWAN_JOIN_EUI    { 0x00, 0x16, 0xC0, 0x01, 0xF1, 0x52, 0xFD, 0x00 }  // MSB Format
-// INSTGateway-External ->   EUI: 0016C001F152F960
-// #define LORAWAN_JOIN_EUI    { 0x00, 0x16, 0xC0, 0x01, 0xF1, 0x52, 0xF9, 0x60 }  // MSB Format
+// INSTGateway-External ->  EUI: 0016C001F152FD00
+//#define LORAWAN_JOIN_EUI    { 0x00, 0x16, 0xC0, 0x01, 0xF1, 0x52, 0xFD, 0x00 }  // MSB Format
+// INSTGateway-Dev ->       EUI: 0016C001F152F960
+#define LORAWAN_JOIN_EUI    { 0x00, 0x16, 0xC0, 0x01, 0xF1, 0x52, 0xF9, 0x60 }  // MSB Format
 
 // tag-d4f3d2 -> DevEUI: f4ce36c17cd4f3d2
 // tag-fc1344 -> DevEUI: f4ce36c44bfc1344
