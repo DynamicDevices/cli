@@ -1,0 +1,8 @@
+{
+    "nrf-connect.debugging.bindings": {
+        "${workspaceFolder}/build": "Launch build"
+    },
+    "files.associations": {
+        "usb_device.h": "c"
+    }
+}

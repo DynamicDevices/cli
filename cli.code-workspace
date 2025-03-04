@@ -26,7 +26,12 @@
 			"nrfx.h": "c",
 			"nrfx_config.h": "c",
 			"nrfx_common.h": "c",
-			"nrf_common.h": "c"
+			"nrf_common.h": "c",
+			"toolchain.h": "c",
+			"usb_device.h": "c",
+			"logging.h": "c",
+			"shell_uart.h": "c",
+			"shell.h": "c"
 		},
 		"nrf-connect.applications": []
 	}

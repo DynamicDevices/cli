@@ -11,6 +11,7 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/usb/usb_device.h>
 #include <zephyr/drivers/lora.h>
+#include <zephyr/sys/reboot.h>
 
 #include <openthread/platform/logging.h>
 #include "openthread/instance.h"
@@ -101,4 +102,5 @@ int main(int aArgc, char *aArgv[])
 void mpsl_assert_handle(const char * const file, const uint32_t line)
 {
 	LOG_WRN("Error");
+	sys_reboot(SYS_REBOOT_COLD);
 }
