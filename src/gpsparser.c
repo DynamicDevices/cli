@@ -147,7 +147,7 @@ void gpsparser(void)
 	while (1) {
 		k_msleep(10);
 		if(rxbuffer[0] != '\0')  {
-			// LOG_DBG("%s", rxbuffer);
+			LOG_DBG("%s", rxbuffer);
 			switch (minmea_sentence_id(rxbuffer, false)) {
 				case MINMEA_SENTENCE_GGA: {
 					struct minmea_sentence_gga frame;
