@@ -235,5 +235,6 @@ void openthread_client_thread(void)
         LOG_INF("Tx Power is %d dB", txpower);
 }
 
-K_THREAD_DEFINE(openthread_client_id, 2048, openthread_client_thread, NULL, NULL, NULL,
-		7, 0, 0);
+#warning DEBUG - DISABLE OPEN THREAD THREAD
+//K_THREAD_DEFINE(openthread_client_id, 2048, openthread_client_thread, NULL, NULL, NULL,
+//		7, 0, 0);
