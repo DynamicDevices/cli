@@ -116,6 +116,9 @@ int lorawan_client_thread(void)
 		return -1;
 	}
 
+	// Set duty cycle off
+	LoRaMacTestSetDutyCycleOn( false );
+
 	LOG_INF("Starting LoRaWAN stack.");
 	ret = lorawan_start();
 	if (ret < 0)
