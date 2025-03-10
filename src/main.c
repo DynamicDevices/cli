@@ -94,7 +94,7 @@ int main(int aArgc, char *aArgv[])
 //    appbluetoothInit();
 
 	// Start MQTT-SN client
-	mqttsnInit();
+//	mqttsnInit();
 
     return 0;
 }

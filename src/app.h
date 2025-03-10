@@ -1,7 +1,7 @@
 #ifndef APP_H
 #define APP_H
 
-#define VERSION 1
+#define VERSION 2
 
 enum TriageStatus {
     P0 = 0,

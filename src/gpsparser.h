@@ -7,10 +7,14 @@ typedef void (*RmcHandler)(int fix_type, float latitude, float longitude, float 
 
 void set_callback_rmc(RmcHandler handler);
 
-int gpsparser_fixtype();
-float gpsparser_latitude();
-float gpsparser_longitude();
-float gpsparser_altitude();
-float gpsparser_rms_deviation();
+/* 
+    Returns a copy of the last GNSS GGA sentence we received
+*/
+bool get_last_gnss_gga(const struct minmea_sentence_gga *ptr_minmea_sentence_gga);
+
+/* 
+    Returns a copy of the last GNSS GST sentence we received
+*/
+bool get_last_gnss_gst(const struct minmea_sentence_gst *ptr_minmea_sentence_gst);
 
 #endif

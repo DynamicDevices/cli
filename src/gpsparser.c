@@ -49,11 +49,27 @@ static volatile bool data_received;
 static int rxdata = 0;
 static char rxbuffer[RX_BUFFER_SIZE] = {'\0'};
 
-static int fix_type = 0;
-static float latitude = 0.0;
-static float longitude = 0.0;
-static float altitude = 0.0;
-static float rms_deviation = 5.0;
+static struct minmea_sentence_gga _last_gnss_gga;
+static struct minmea_sentence_gst _last_gnss_gst;
+
+
+K_MUTEX_DEFINE(data_integrity_mutex);
+
+bool get_last_gnss_gga(const struct minmea_sentence_gga *ptr_minmea_sentence_gga)
+{
+	k_mutex_lock(&data_integrity_mutex, K_FOREVER);
+	memcpy( (struct minmea_sentence_gga *)ptr_minmea_sentence_gga, &_last_gnss_gga, sizeof(struct minmea_sentence_gga));
+	k_mutex_unlock(&data_integrity_mutex);
+	return true;
+}
+
+bool get_last_gnss_gst(const struct minmea_sentence_gst *ptr_minmea_sentence_gst)
+{
+	k_mutex_lock(&data_integrity_mutex, K_FOREVER);
+	memcpy( (struct minmea_sentence_gst *)ptr_minmea_sentence_gst, &_last_gnss_gst, sizeof(struct minmea_sentence_gst));
+	k_mutex_unlock(&data_integrity_mutex);
+	return true;
+}
 
 // Functions
 static void uart_fifo_callback(const struct device *dev, void *user_data)
@@ -96,7 +112,7 @@ void tx_nmea_cmd(const char *cmd)
 	char nmea_buf[32];
 	int gst_checksum = minmea_checksum(cmd);
 	
-	sprintf(nmea_buf, "$s%02x\r\n", cmd, gst_checksum);
+	sprintf(nmea_buf, "%s%02x\r\n", cmd, gst_checksum);
 	
 	int i = 0;
 	while(nmea_buf[i] != '\0') {
@@ -104,17 +120,9 @@ void tx_nmea_cmd(const char *cmd)
 	}
 }
 
-int gpsparser_fixtype() { return fix_type; }
-float gpsparser_latitude() { return latitude; }
-float gpsparser_longitude() { return longitude; }
-float gpsparser_altitude() { return altitude; }
-float gpsparser_rms_deviation() { return rms_deviation; }
-
 void gpsparser(void)
 {
-    char line[MINMEA_MAX_LENGTH] = {'\0'};
     int ret;
-	char *rx_buf;
 	char gst_buf[32];
 	uint8_t gst_checksum;
 	bool gst_checksum_success;
@@ -161,6 +169,7 @@ void gpsparser(void)
 
 	k_msleep(3000);
 
+	// Enable reporting of sentence xxGST (error)
 	gst_checksum = minmea_checksum("$PAIR062,8,1*");
 	sprintf(gst_buf, "$PAIR062,8,1*%02x\r\n", gst_checksum);
 	gst_checksum_success = minmea_check(gst_buf, true);
@@ -169,7 +178,51 @@ void gpsparser(void)
 		uart_poll_out(uart, gst_buf[i++]);
 	}
 
+	/*
+
+[00:01:25.012,145] <dbg> gpsparser: gpsparser: $GPGSV,1,1,02,05,,,22,28,,,16,1*6E
+
+GNSS Satellites in View. The GSV sentence provides the number of satellites in view (SV), satellite ID
+numbers, elevation, azimuth, and SNR value, and it contains maximum four satellites per transmission.
+Therefore, it may take several sentences to get complete information. The total number of sentences
+being transmitted and the sentence number are indicated in the first two data fields
+
+[00:01:25.022,308] <dbg> gpsparser: gpsparser: $GNVTG,,T,,M1.095,V,,,,,,,070180,,,N,V*2A
+
+Course Over Ground & Ground Speed. The actual course and speed relative to the ground.
+
+[00:01:25.032,440] <dbg> gpsparser: gpsparser: $GNGST,124521.095,0.000,99999,99999,0.0,99999,99999,99999*63
+
+GNSS DOP and Active Satellites. GNSS receiver operating mode, satellites used in the navigation
+solution reported by the GGA sentence, and DOP values
+
+[00:01:25.999,572] <dbg> gpsparser: gpsparser: $GNGSA,A,1,,,,,,,,095,V,N*6AM,,M,,*58
+
+GNSS DOP and Active Satellites. GNSS receiver operating mode, satellites used in the navigation
+solution reported by the GGA sentence, and DOP values.
+
+[00:01:26.009,918] <dbg> gpsparser: gpsparser: $GPGSV,1,1,,,,,,,,,,,,,,,,4*18
+
+GNSS Satellites in View. The GSV sentence provides the number of satellites in view (SV), satellite ID
+numbers, elevation, azimuth, and SNR value, and it contains maximum four satellites per transmission.
+Therefore, it may take several sentences to get complete information. The total number of sentences
+being transmitted and the sentence number are indicated in the first two data fields
+
+[00:01:26.020,141] <dbg> gpsparser: gpsparser: $GNRMC,124522.095,V,,,,,,,07018*6F
+
+Recommended Minimum Specific GNSS Data. Time, date, position, course, and speed data provided by a GNSS receiver
+
+[00:01:26.030,487] <dbg> gpsparser: gpsparser: $GNGST,124522.095,0.000,99999,99999,0.0,99999,99999,99999*60
+
+[00:01:26.997,680] <dbg> gpsparser: gpsparser: $GNGLL,,,,,124523.095,V,N*6,M,,M,,*59
+
+Geographic Position – Latitude/Longitude. Latitude and longitude of the GNSS receiver position, the time
+of position fix and status.
+
+ */
+
 	while (1) {
+		// TODO: Need to wait on data Rx here
 		k_msleep(10);
 		if(rxbuffer[0] != '\0')  {
 			LOG_DBG("%s", rxbuffer);
@@ -177,35 +230,32 @@ void gpsparser(void)
 				case MINMEA_SENTENCE_GGA: {
 					struct minmea_sentence_gga frame;
 					if (minmea_parse_gga(&frame, rxbuffer)) {
+#if DEBUG_GPS_PARSER
 						LOG_DBG("$xxGGA: %s", rxbuffer);
-
 						LOG_DBG("$xxGGA: fix quality: %d", frame.fix_quality);
-						fix_type = frame.fix_quality;
-
 						LOG_DBG("$xxGGA: latitude: %f", minmea_tocoord(&frame.latitude));
-						latitude = minmea_tocoord(&frame.latitude);
-
 						LOG_DBG("$xxGGA: longitude: %f", minmea_tocoord(&frame.longitude));
-						longitude = minmea_tocoord(&frame.longitude);
-
 						LOG_DBG("$xxGGA: altitude: %f", minmea_tofloat(&frame.altitude));
-						altitude =  minmea_tofloat(&frame.altitude);
+#endif
+						k_mutex_lock(&data_integrity_mutex, K_FOREVER);
+						memcpy(&_last_gnss_gga, &frame, sizeof(struct minmea_sentence_gga));
+						k_mutex_unlock(&data_integrity_mutex);
 					}
 				} break;
 
 				case MINMEA_SENTENCE_GST: {
 					struct minmea_sentence_gst frame;
 					if (minmea_parse_gst(&frame, rxbuffer)) {
+#if DEBUG_GPS_PARSER
 						LOG_DBG("$xxGST: %s", rxbuffer);
-
 						LOG_DBG("$xxGST:  rms error deviation: %f", minmea_tofloat(&frame.rms_deviation));
-						rms_deviation = minmea_tofloat(&frame.rms_deviation);
-
 						LOG_DBG("$xxGST:  latitude error deviation: %f", minmea_tofloat(&frame.latitude_error_deviation));
-
 						LOG_DBG("$xxGST:  longitude error deviation: %f", minmea_tofloat(&frame.longitude_error_deviation));
-
 						LOG_DBG("$xxGST:  altitude error deviation: %f", minmea_tofloat(&frame.altitude_error_deviation));
+#endif
+						k_mutex_lock(&data_integrity_mutex, K_FOREVER);
+						memcpy(&_last_gnss_gst, &frame, sizeof(struct minmea_sentence_gst));
+						k_mutex_unlock(&data_integrity_mutex);
 					}
 				} break;
 

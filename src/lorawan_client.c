@@ -30,16 +30,17 @@
 
 #include "lorawan_client.h"
 
-//#define DELAY K_SECONDS(30)
+// #define DELAY K_SECONDS(30)
 #warning DEBUG - FAST DELAY INCLUDING 8s for LoRa OTA send
-#define DELAY K_SECONDS((10-8))
+#define DELAY K_SECONDS((10 - 8))
 
 LOG_MODULE_REGISTER(lorawan_client, CONFIG_LORAWAN_CLIENT_LOG_LEVEL);
 
 static void dl_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t snr, uint8_t len, const uint8_t *data)
 {
 	LOG_INF("Port %d, Pending %d, RSSI %ddB, SNR %ddBm", port, data_pending, rssi, snr);
-	if (data) {
+	if (data)
+	{
 		LOG_HEXDUMP_INF(data, len, "Payload: ");
 	}
 }
@@ -60,46 +61,38 @@ float longitude = 0.0;
 float altitude = 0.0;
 float rms_deviation = 0.0;
 
-// TODO: Need a mutex here
-
 void rmc_handler(int fix_type, float latitude, float longitude, float altitude)
 {
-	fix_type = gpsparser_fixtype();
-	latitude = gpsparser_latitude();
-	longitude = gpsparser_longitude();
-	altitude = gpsparser_altitude();
-	rms_deviation = gpsparser_rms_deviation();
+	// Impelement callback - currently just polling
 }
 
 int lorawan_client_thread(void)
 {
 	const struct device *lora_dev;
 	static struct nvs_fs fs;
-	
+
 	struct lorawan_join_config join_cfg;
 	uint16_t dev_nonce = 0;
 
-#ifdef LORAWAN_USE_NVS 
+#ifdef LORAWAN_USE_NVS
 	uint8_t dev_eui[8];
 	uint8_t join_eui[8];
 	uint8_t app_key[16];
 	uint8_t nwk_key[16];
-	
+
 #else
 	uint8_t dev_eui[8];
 	uint8_t join_eui[] = LORAWAN_JOIN_EUI;
 	uint8_t app_key[] = LORAWAN_APP_KEY;
 	uint8_t nwk_key[] = LORAWAN_NWK_KEY;
 
-
-    // Get EUI64
-    otInstance *instance;
+	// Get EUI64
+	otInstance *instance;
 	instance = openthread_get_default_instance();
-    otLinkGetFactoryAssignedIeeeEui64(instance, (otExtAddress *)&dev_eui);
+	otLinkGetFactoryAssignedIeeeEui64(instance, (otExtAddress *)&dev_eui);
 
 #endif
 
-	
 	int ret;
 	ssize_t bytes_written;
 
@@ -109,23 +102,24 @@ int lorawan_client_thread(void)
 
 	nvs_initialise(&fs);
 	nvs_read_init_parameter(&fs, NVS_DEVNONCE_ID, &dev_nonce);
-#ifdef LORAWAN_USE_NVS 
+#ifdef LORAWAN_USE_NVS
 	nvs_read_init_parameter(&fs, NVS_LORAWAN_DEV_EUI_ID, dev_eui);
 	nvs_read_init_parameter(&fs, NVS_LORAWAN_JOIN_EUI_ID, join_eui);
 	nvs_read_init_parameter(&fs, NVS_LORAWAN_APP_KEY_ID, app_key);
 	nvs_read_init_parameter(&fs, NVS_LORAWAN_NWK_KEY_ID, nwk_key);
-
 #endif
 
 	lora_dev = DEVICE_DT_GET(DT_ALIAS(lora0));
-	if (!device_is_ready(lora_dev)) {
+	if (!device_is_ready(lora_dev))
+	{
 		LOG_WRN("%s: device not ready.", lora_dev->name);
 		return -1;
 	}
 
 	LOG_INF("Starting LoRaWAN stack.");
 	ret = lorawan_start();
-	if (ret < 0) {
+	if (ret < 0)
+	{
 		LOG_WRN("lorawan_start failed: %d", ret);
 		return -1;
 	}
@@ -133,8 +127,7 @@ int lorawan_client_thread(void)
 	// Enable callbacks
 	struct lorawan_downlink_cb downlink_cb = {
 		.port = LW_RECV_PORT_ANY,
-		.cb = dl_callback
-	};
+		.cb = dl_callback};
 
 	lorawan_register_downlink_callback(&downlink_cb);
 	lorawan_register_dr_changed_callback(lorwan_datarate_changed);
@@ -149,26 +142,32 @@ int lorawan_client_thread(void)
 	int i = 1;
 
 	LOG_INF("DevEUI: %02x%02x%02x%02x%02x%02x%02x%02x",
-            dev_eui[0],
-            dev_eui[1],
-            dev_eui[2],
-            dev_eui[3],
-            dev_eui[4],
-            dev_eui[5],
-            dev_eui[6],
-            dev_eui[7]
-            );
+			dev_eui[0],
+			dev_eui[1],
+			dev_eui[2],
+			dev_eui[3],
+			dev_eui[4],
+			dev_eui[5],
+			dev_eui[6],
+			dev_eui[7]);
 
-	do {
+	do
+	{
 		LOG_INF("Joining network using OTAA, dev nonce %d, attempt %d: ", join_cfg.otaa.dev_nonce, i++);
 		ret = lorawan_join(&join_cfg);
-		if (ret < 0) {
-			if ((ret =-ETIMEDOUT)) {
+		if (ret < 0)
+		{
+			if ((ret = -ETIMEDOUT))
+			{
 				LOG_WRN("Timed-out waiting for response.");
-			} else {
+			}
+			else
+			{
 				LOG_WRN("Join failed (%d)", ret);
 			}
-		} else {
+		}
+		else
+		{
 			LOG_INF("Join successful.");
 		}
 
@@ -177,13 +176,17 @@ int lorawan_client_thread(void)
 		join_cfg.otaa.dev_nonce = dev_nonce;
 		// Save value away in Non-Volatile Storage.
 		bytes_written = nvs_write(&fs, NVS_DEVNONCE_ID, &dev_nonce, sizeof(dev_nonce));
-		if (bytes_written < 0) {
+		if (bytes_written < 0)
+		{
 			LOG_WRN("NVS: Failed to write id %d (%d)", NVS_DEVNONCE_ID, bytes_written);
-		} else {
-			LOG_DBG("NVS: Wrote %d bytes to id %d",bytes_written, NVS_DEVNONCE_ID);
+		}
+		else
+		{
+			LOG_DBG("NVS: Wrote %d bytes to id %d", bytes_written, NVS_DEVNONCE_ID);
 		}
 
-		if (ret < 0) {
+		if (ret < 0)
+		{
 			// If failed, wait before re-trying.
 			k_sleep(K_MSEC(5000));
 		}
@@ -193,33 +196,34 @@ int lorawan_client_thread(void)
 #ifdef LORAWAN_CLASS_C
 	printk("Setting device to Class C");
 	ret = lorawan_set_class(LORAWAN_CLASS_C);
-	if (ret != 0) {
+	if (ret != 0)
+	{
 		LOG_WRN("Failed to set LoRaWAN class: %d", ret);
 	}
 #endif
 
 	int debug_count = 0;
-    enum TriageStatus triage_status = P0;
+	enum TriageStatus triage_status = P0;
 	int battery_percentage = 100;
 
 	// Set GNSS callback
 	set_callback_rmc(rmc_handler);
 
-	while (1) {
+	while (1)
+	{
 
 #define LORAWAN_PORT 2
-#define PAYLOAD_SIZE 19
 
-		fix_type = gpsparser_fixtype();
-		latitude = gpsparser_latitude();
-		longitude = gpsparser_longitude();
-		altitude = gpsparser_altitude();
-		rms_deviation = gpsparser_rms_deviation();
+		struct minmea_sentence_gga last_gga;
+		struct minmea_sentence_gst last_gst;
 
-		uint8_t payload[PAYLOAD_SIZE];
+		get_last_gnss_gga(&last_gga);
+		get_last_gnss_gst(&last_gst);
+
+		uint8_t payload[5 + sizeof( struct minmea_sentence_gga) + sizeof( struct minmea_sentence_gst)];
 
 		// Build test payload format here - keep it similar to OpenThread payload
-        // Byte 0 - version [1]
+		// Byte 0 - version [1]
 		payload[0] = VERSION;
 
 		// Byte 1 - triageStatus [1]
@@ -231,42 +235,37 @@ int lorawan_client_thread(void)
 		// Byte 3 - temperature [1]
 		payload[3] = whole_celsius;
 
-		// Byte 4 - fixType [1]
-		payload[4] = fix_type;
+		// Byte 4 - debugCount [1]
+		payload[5] = debug_count++;
 
-		// Byte 5 .. 8 - latitude [4]
-		*((float *)&payload[5]) = latitude;
+		// Byte 5 to X last GGA
+		memcpy(&payload[6], &last_gga, sizeof(struct minmea_sentence_gga));
 
-		// Byte 9 .. 12 - longitude [4]
-		*((float *)&payload[9]) = longitude;
-
-		// Byte 13 .. 16 - altitude [4]
-		*((float *)&payload[13]) = altitude;
-
-		// Byte 17 - accuracyMetres [1]
-		payload[17] = (char)rms_deviation;
-
-		// Byte 18 - debugCount [1]
-		payload[18] = debug_count++;
+		// Byte (5+sizeof(struct minmea_sentence_gga)) to Z last GST
+		memcpy(&payload[6 + sizeof(struct minmea_sentence_gga)], &last_gst, sizeof(struct minmea_sentence_gst));
 
 		// TODO: Need to have a look at this. It seems to take 7-8s to send a message
-		ret = lorawan_send(LORAWAN_PORT, payload, PAYLOAD_SIZE, LORAWAN_MSG_UNCONFIRMED);
-		if (ret == -EAGAIN) {
+		ret = lorawan_send(LORAWAN_PORT, payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
+		if (ret == -EAGAIN)
+		{
 			LOG_ERR("lorawan_send failed: %d. Continuing...", ret);
 			k_sleep(DELAY);
 			continue;
-		} else if (ret < 0) {
-			LOG_WRN("lorawan_send failed: %d", ret);
-//			return -1;
 		}
-		else {
-			LOG_INF("Data sent! (count %d)", debug_count);
+		else if (ret < 0)
+		{
+			LOG_WRN("lorawan_send failed: %d", ret);
+			//			return -1;
+		}
+		else
+		{
+			LOG_INF("Data sent! (debug count %d) (tx payload bytes %d)", debug_count, sizeof(payload));
 		}
 
 		k_sleep(DELAY);
 
 #warning Changing triage status for debugging
-		if(++triage_status >= P3)
+		if (++triage_status >= P3)
 			triage_status = P0;
 	}
 
@@ -274,4 +273,4 @@ int lorawan_client_thread(void)
 }
 
 K_THREAD_DEFINE(lorawan_client_id, 2048, lorawan_client_thread, NULL, NULL, NULL,
-		7, 0, 0);
+				7, 0, 0);

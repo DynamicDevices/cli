@@ -3,6 +3,7 @@
         "${workspaceFolder}/build": "Launch build"
     },
     "files.associations": {
-        "usb_device.h": "c"
+        "usb_device.h": "c",
+        "gpsparser.h": "c"
     }
 }

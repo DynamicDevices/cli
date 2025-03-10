@@ -332,6 +332,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         float altitude = 0.0;
         char altitude_char[8];
 
+#if 0
         fix_type = gpsparser_fixtype();
         LOG_DBG("Fix Type: %d", fix_type);
 
@@ -366,6 +367,7 @@ void mqttsnPublishWorkHandler(struct k_work *work)
 
         LOG_DBG("Publishing %d bytes rsp %d", length, err);
         // otLedToggle(LED_YELLOW);
+#endif
     }
 
     // Restart timer
