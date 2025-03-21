@@ -1,3 +1,4 @@
+#if 0
 
 /*
  * Copyright (c) 2019 Nordic Semiconductor ASA
@@ -520,3 +521,5 @@ void bt_lns_stop_per_read_location_and_speed(struct bt_lns_client *lns)
 	 */
 	k_work_cancel_delayable(&lns->periodic_read.read_work);
 }
+
+#endif

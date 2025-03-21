@@ -1,3 +1,4 @@
+#if 0
 
 // Includes
 
@@ -412,3 +413,5 @@ int appbluetoothInit(void)
 
 	return 0;
 }
+
+#endif
