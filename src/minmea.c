@@ -6,8 +6,6 @@
  * published by Sam Hocevar. See the COPYING file for more details.
  */
 
-#define __USE_MISC
-
 #include "minmea.h"
 
 #include <stdlib.h>
@@ -15,6 +13,8 @@
 #include <ctype.h>
 #include <stdarg.h>
 #include <time.h>
+
+#include <zephyr/sys/timeutil.h>
 
 #define boolstr(s) ((s) ? "true" : "false")
 
@@ -634,7 +634,7 @@ int minmea_gettime(struct timespec *ts, const struct minmea_date *date, const st
     tm.tm_min = time_->minutes;
     tm.tm_sec = time_->seconds;
 
-    time_t timestamp = timegm(&tm); /* See README.md if your system lacks timegm(). */
+    time_t timestamp = timeutil_timegm(&tm); /* See README.md if your system lacks timegm(). */
     if (timestamp != (time_t)-1) {
         ts->tv_sec = timestamp;
         ts->tv_nsec = time_->microseconds * 1000;
