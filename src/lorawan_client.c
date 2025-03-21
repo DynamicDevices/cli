@@ -51,12 +51,20 @@ static void dl_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t sn
 
 extern struct otInstance *openthread_get_default_instance(void);
 
-static void lorwan_datarate_changed(enum lorawan_datarate dr)
+static void lorawan_datarate_changed(enum lorawan_datarate dr)
 {
 	uint8_t unused, max_size;
 
 	lorawan_get_payload_sizes(&unused, &max_size);
 	LOG_INF("New Datarate: DR_%d, Max Payload %d", dr, max_size);
+}
+
+uint8_t get_battery_level(void)
+{
+    // Placeholder implementation
+    // Replace with actual code to read battery level
+    uint8_t battery_level = 100; // Assuming battery is fully charged
+    return battery_level;
 }
 
 void rmc_handler(int fix_type, float latitude, float longitude, float altitude)
@@ -132,8 +140,9 @@ int lorawan_client_thread(void)
 		.cb = dl_callback};
 
 	lorawan_register_downlink_callback(&downlink_cb);
-	lorawan_register_dr_changed_callback(lorwan_datarate_changed);
-//	lorawan_enable_adr(false);
+	lorawan_register_dr_changed_callback(lorawan_datarate_changed);
+	lorawan_register_battery_level_callback(get_battery_level);
+	lorawan_enable_adr(false);
 
 	join_cfg.mode = LORAWAN_ACT_OTAA;
 	join_cfg.dev_eui = dev_eui;
