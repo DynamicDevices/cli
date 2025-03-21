@@ -8,6 +8,8 @@
 
 #include <stdio.h>
 
+#include <ncs_version.h>
+
 #include <zephyr/drivers/uart.h>
 #include <zephyr/usb/usb_device.h>
 #include <zephyr/drivers/lora.h>
@@ -42,8 +44,8 @@ LOG_MODULE_REGISTER(cli_main, CONFIG_OT_COMMAND_LINE_INTERFACE_LOG_LEVEL);
 #define WELCOME_TEXT \
 	"\n\r"\
 	"\n\r"\
-    "Starting INST CLI\n\r"\
-	"\n\r"\
+    "Starting INST CLI build: " __DATE__ " " __TIME__ "\n\r"\
+	"NCS stack: " NCS_VERSION_STRING "\n\r"\
 	"\n\r"\
 
 // Functions

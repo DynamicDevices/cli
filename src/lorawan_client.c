@@ -59,12 +59,6 @@ static void lorwan_datarate_changed(enum lorawan_datarate dr)
 	LOG_INF("New Datarate: DR_%d, Max Payload %d", dr, max_size);
 }
 
-int fix_type = 0;
-float latitude = 0.0;
-float longitude = 0.0;
-float altitude = 0.0;
-float rms_deviation = 0.0;
-
 void rmc_handler(int fix_type, float latitude, float longitude, float altitude)
 {
 	// Impelement callback - currently just polling
@@ -141,7 +135,7 @@ int lorawan_client_thread(void)
 	lorawan_register_dr_changed_callback(lorwan_datarate_changed);
 //	lorawan_enable_adr(false);
 
-		join_cfg.mode = LORAWAN_ACT_OTAA;
+	join_cfg.mode = LORAWAN_ACT_OTAA;
 	join_cfg.dev_eui = dev_eui;
 	join_cfg.otaa.join_eui = join_eui;
 	join_cfg.otaa.app_key = app_key;
@@ -230,9 +224,11 @@ int lorawan_client_thread(void)
 		get_last_gnss_gga(&last_gga);
 		get_last_gnss_gst(&last_gst);
 
-//		uint8_t payload[5 + sizeof( struct minmea_sentence_gga) + sizeof( struct minmea_sentence_gst)];
-//		uint8_t payload[5 + sizeof( struct minmea_sentence_gga)];
+#if VERSION == 1 
 		uint8_t payload[19];
+#else
+		uint8_t payload[5 + sizeof( struct minmea_sentence_gga) + sizeof( struct minmea_sentence_gst)];
+#endif
 
 		// Build test payload format here - keep it similar to OpenThread payload
 		// Byte 0 - version [1]
@@ -266,20 +262,17 @@ int lorawan_client_thread(void)
 		// Byte 18 - debugCount [1]
 		payload[18] = debug_count++;
 
-#if 0
-		// Byte 5 to X last GGA
-		memcpy(&payload[5], &last_gga, sizeof(struct minmea_sentence_gga));
-
+#if VERSION == 2
 		// Byte (5+sizeof(struct minmea_sentence_gga)) to Z last GST
-//		memcpy(&payload[5 + sizeof(struct minmea_sentence_gga)], &last_gst, sizeof(struct minmea_sentence_gst));
+		memcpy(&payload[5 + sizeof(struct minmea_sentence_gga)], &last_gst, sizeof(struct minmea_sentence_gst));
 #endif
 
 		// TODO: Need to have a look at this. It seems to take 7-8s to send a message
-		LOG_ERR("lorawan_send %d bytes", sizeof(payload));
+		LOG_INF("lorawan_send %d bytes", sizeof(payload));
 		ret = lorawan_send(LORAWAN_PORT, payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
 		if (ret == -EAGAIN)
 		{
-			LOG_ERR("lorawan_send failed: %d. Continuing...", ret);
+			LOG_WRN("lorawan_send failed: %d. Continuing...", ret);
 			k_sleep(DELAY);
 			continue;
 		}
@@ -295,7 +288,7 @@ int lorawan_client_thread(void)
 
 		k_sleep(DELAY);
 
-#warning Changing triage status for debugging
+#warning Updating triage status for debugging
 		if (++triage_status >= P3)
 			triage_status = P0;
 	}

@@ -1,4 +1,8 @@
 
+#include <ncs_version.h>>
+
+#if NCS_VERSION_NUMBER < 0x20901
+
 #include "mqttsn.h"
 
 // Includes
@@ -414,3 +418,5 @@ otError mqttsnInit()
 
     return error;
 }
+
+#endif

@@ -9,6 +9,8 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <ncs_version.h>
+
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
