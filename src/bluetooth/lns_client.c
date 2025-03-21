@@ -1,3 +1,4 @@
+
 /*
  * Copyright (c) 2019 Nordic Semiconductor ASA
  *
@@ -150,13 +151,13 @@ static uint8_t read_process(struct bt_conn *conn, uint8_t err,
 			     struct bt_gatt_read_params *params,
 			     const void *data, uint16_t length)
 {
+#if 0
 	struct bt_lns_client *lns;
 	uint16_t flags = BT_LNS_VAL_INVALID;
 	const uint8_t *bdata = data;
 
     LOG_WRN("TODO: read_process");
 
-#if 0
 	lns = CONTAINER_OF(params, struct bt_lns_client, read_params);
 
 	if (!lns->read_cb) {

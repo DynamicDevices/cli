@@ -31,7 +31,8 @@
 			"usb_device.h": "c",
 			"logging.h": "c",
 			"shell_uart.h": "c",
-			"shell.h": "c"
+			"shell.h": "c",
+			"time.h": "c"
 		},
 		"nrf-connect.applications": []
 	}

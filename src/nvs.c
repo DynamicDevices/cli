@@ -12,7 +12,11 @@
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#if NCS_VERSION_NUMBER >= 0x20901
+#include <zephyr/random/random.h>
+#else
 #include <zephyr/random/rand32.h>
+#endif
 #include <zephyr/console/console.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/storage/flash_map.h>

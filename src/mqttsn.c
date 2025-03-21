@@ -1,3 +1,4 @@
+
 #include "mqttsn.h"
 
 // Includes
@@ -322,6 +323,9 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         static int debug_count = 0;
         enum TriageStatus triage_status = P0;
         int battery_percentage = 100;
+
+#if 0
+
         int accuracy_metres = 5;
         char accuracy_metres_char[8];
         int fix_type = 0;
@@ -332,7 +336,6 @@ void mqttsnPublishWorkHandler(struct k_work *work)
         float altitude = 0.0;
         char altitude_char[8];
 
-#if 0
         fix_type = gpsparser_fixtype();
         LOG_DBG("Fix Type: %d", fix_type);
 

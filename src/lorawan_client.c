@@ -18,6 +18,7 @@
 #include <zephyr/drivers/flash.h>
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/fs/nvs.h>
+#include <zephyr/sys/reboot.h>
 
 #include "openthread/platform/logging.h"
 #include "openthread/instance.h"
@@ -35,6 +36,9 @@
 #define DELAY K_SECONDS((10 - 8))
 
 LOG_MODULE_REGISTER(lorawan_client, CONFIG_LORAWAN_CLIENT_LOG_LEVEL);
+
+
+void LoRaMacTestSetDutyCycleOn(bool enable);
 
 static void dl_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t snr, uint8_t len, const uint8_t *data)
 {
@@ -73,6 +77,7 @@ int lorawan_client_thread(void)
 
 	struct lorawan_join_config join_cfg;
 	uint16_t dev_nonce = 0;
+	uint8_t join_fail_count = 0;
 
 #ifdef LORAWAN_USE_NVS
 	uint8_t dev_eui[8];
@@ -134,8 +139,9 @@ int lorawan_client_thread(void)
 
 	lorawan_register_downlink_callback(&downlink_cb);
 	lorawan_register_dr_changed_callback(lorwan_datarate_changed);
+//	lorawan_enable_adr(false);
 
-	join_cfg.mode = LORAWAN_ACT_OTAA;
+		join_cfg.mode = LORAWAN_ACT_OTAA;
 	join_cfg.dev_eui = dev_eui;
 	join_cfg.otaa.join_eui = join_eui;
 	join_cfg.otaa.app_key = app_key;
@@ -154,23 +160,24 @@ int lorawan_client_thread(void)
 			dev_eui[6],
 			dev_eui[7]);
 
+	// Set duty cycle again as we get duty cycle restricted join failures here?
+	LoRaMacTestSetDutyCycleOn( false );
+
 	do
 	{
 		LOG_INF("Joining network using OTAA, dev nonce %d, attempt %d: ", join_cfg.otaa.dev_nonce, i++);
 		ret = lorawan_join(&join_cfg);
-		if (ret < 0)
-		{
-			if ((ret = -ETIMEDOUT))
-			{
+		if (ret < 0) {
+			if ((ret =-ETIMEDOUT)) {
 				LOG_WRN("Timed-out waiting for response.");
+			} else {
+				LOG_WRN("Join failed (error %d) (count %d)", ret, join_fail_count);
+				if(++join_fail_count > 3) {
+					LOG_ERR("Join failed too many times. Rebooting.");
+					sys_reboot(SYS_REBOOT_WARM);
+				}
 			}
-			else
-			{
-				LOG_WRN("Join failed (%d)", ret);
-			}
-		}
-		else
-		{
+		} else {
 			LOG_INF("Join successful.");
 		}
 
@@ -223,7 +230,9 @@ int lorawan_client_thread(void)
 		get_last_gnss_gga(&last_gga);
 		get_last_gnss_gst(&last_gst);
 
-		uint8_t payload[5 + sizeof( struct minmea_sentence_gga) + sizeof( struct minmea_sentence_gst)];
+//		uint8_t payload[5 + sizeof( struct minmea_sentence_gga) + sizeof( struct minmea_sentence_gst)];
+//		uint8_t payload[5 + sizeof( struct minmea_sentence_gga)];
+		uint8_t payload[19];
 
 		// Build test payload format here - keep it similar to OpenThread payload
 		// Byte 0 - version [1]
@@ -236,18 +245,37 @@ int lorawan_client_thread(void)
 		payload[2] = battery_percentage;
 
 		// Byte 3 - temperature [1]
-		payload[3] = whole_celsius;
+//		payload[3] = whole_celsius;
+		payload[3] = 0;
 
-		// Byte 4 - debugCount [1]
-		payload[5] = debug_count++;
+		// Byte 4 - fix type
+		payload[4] = last_gga.fix_quality;
 
+		// Byte 5 .. 8 - latitude [4]
+		*((float *)&payload[5]) = minmea_tocoord(&last_gga.latitude);
+
+		// Byte 9 .. 12 - longitude [4]
+		*((float *)&payload[9]) = minmea_tocoord(&last_gga.longitude);
+
+		// Byte 13 .. 16 - altitude [4]
+		*((float *)&payload[13]) = minmea_tofloat(&last_gga.altitude);
+
+		// Byte 17 - accuracyMetres [1]
+		payload[17] = (uint8_t)minmea_tofloat(&last_gst.rms_deviation);
+
+		// Byte 18 - debugCount [1]
+		payload[18] = debug_count++;
+
+#if 0
 		// Byte 5 to X last GGA
-		memcpy(&payload[6], &last_gga, sizeof(struct minmea_sentence_gga));
+		memcpy(&payload[5], &last_gga, sizeof(struct minmea_sentence_gga));
 
 		// Byte (5+sizeof(struct minmea_sentence_gga)) to Z last GST
-		memcpy(&payload[6 + sizeof(struct minmea_sentence_gga)], &last_gst, sizeof(struct minmea_sentence_gst));
+//		memcpy(&payload[5 + sizeof(struct minmea_sentence_gga)], &last_gst, sizeof(struct minmea_sentence_gst));
+#endif
 
 		// TODO: Need to have a look at this. It seems to take 7-8s to send a message
+		LOG_ERR("lorawan_send %d bytes", sizeof(payload));
 		ret = lorawan_send(LORAWAN_PORT, payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
 		if (ret == -EAGAIN)
 		{
@@ -262,7 +290,7 @@ int lorawan_client_thread(void)
 		}
 		else
 		{
-			LOG_INF("Data sent! (debug count %d) (tx payload bytes %d)", debug_count, sizeof(payload));
+//			LOG_INF("Data sent! (debug count %d) (tx payload bytes %d)", debug_count, sizeof(payload));
 		}
 
 		k_sleep(DELAY);
@@ -275,5 +303,4 @@ int lorawan_client_thread(void)
 	return 0;
 }
 
-K_THREAD_DEFINE(lorawan_client_id, 2048, lorawan_client_thread, NULL, NULL, NULL,
-				7, 0, 0);
+K_THREAD_DEFINE(lorawan_client_id, 2048, lorawan_client_thread, NULL, NULL, NULL, 7, 0, 0);

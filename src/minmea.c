@@ -6,6 +6,8 @@
  * published by Sam Hocevar. See the COPYING file for more details.
  */
 
+#define __USE_MISC
+
 #include "minmea.h"
 
 #include <stdlib.h>
