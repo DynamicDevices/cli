@@ -32,8 +32,8 @@
 #include "lorawan_client.h"
 
 // #define DELAY K_SECONDS(30)
-#warning DEBUG - FAST DELAY INCLUDING 8s for LoRa OTA send
-#define DELAY K_SECONDS((10 - 8))
+//#warning DEBUG - FAST DELAY INCLUDING 8s for LoRa OTA send
+#define DELAY K_SECONDS((60 - 8))
 
 LOG_MODULE_REGISTER(lorawan_client, CONFIG_LORAWAN_CLIENT_LOG_LEVEL);
 
