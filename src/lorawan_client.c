@@ -177,13 +177,16 @@ int lorawan_client_thread(void)
 				LOG_WRN("Timed-out waiting for response.");
 			} else {
 				LOG_WRN("Join failed (error %d) (count %d)", ret, join_fail_count);
-				if(++join_fail_count > 3) {
-					LOG_ERR("Join failed too many times. Rebooting.");
-					k_sleep(K_SECONDS(3));
-					sys_reboot(SYS_REBOOT_WARM);
-				}
 			}
-			
+
+			// Even when we have set the duty cycle off we can fail with join duty cycle restriction.
+			// If we fail due to restricted duty cycle we'll see a timeout error. (!)
+			if(++join_fail_count > 5) {
+				LOG_ERR("Join failed too many times. Rebooting.");
+				k_sleep(K_SECONDS(3));
+				sys_reboot(SYS_REBOOT_WARM);
+			}
+
 			LOG_DBG("Join Sleep.");
 			k_sleep(DELAY_JOIN_S);
 			LOG_DBG("Slept.");
