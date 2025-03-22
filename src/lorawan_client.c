@@ -33,7 +33,9 @@
 
 // #define DELAY K_SECONDS(30)
 //#warning DEBUG - FAST DELAY INCLUDING 8s for LoRa OTA send
-#define DELAY K_SECONDS((60 - 8))
+#define DELAY_MSG_S K_SECONDS((60 - 8))
+#define DELAY_JOIN_S K_SECONDS(10)
+#define DELAY_RESEND_S K_SECONDS(10)
 
 LOG_MODULE_REGISTER(lorawan_client, CONFIG_LORAWAN_CLIENT_LOG_LEVEL);
 
@@ -141,7 +143,7 @@ int lorawan_client_thread(void)
 
 	lorawan_register_downlink_callback(&downlink_cb);
 	lorawan_register_dr_changed_callback(lorawan_datarate_changed);
-	lorawan_register_battery_level_callback(get_battery_level);
+//	lorawan_register_battery_level_callback(get_battery_level);
 	lorawan_enable_adr(false);
 
 	join_cfg.mode = LORAWAN_ACT_OTAA;
@@ -177,9 +179,16 @@ int lorawan_client_thread(void)
 				LOG_WRN("Join failed (error %d) (count %d)", ret, join_fail_count);
 				if(++join_fail_count > 3) {
 					LOG_ERR("Join failed too many times. Rebooting.");
+					k_sleep(K_SECONDS(3));
 					sys_reboot(SYS_REBOOT_WARM);
 				}
 			}
+			
+			LOG_DBG("Join Sleep.");
+			k_sleep(DELAY_JOIN_S);
+			LOG_DBG("Slept.");
+			continue;
+
 		} else {
 			LOG_INF("Join successful.");
 		}
@@ -282,7 +291,9 @@ int lorawan_client_thread(void)
 		if (ret == -EAGAIN)
 		{
 			LOG_WRN("lorawan_send failed: %d. Continuing...", ret);
-			k_sleep(DELAY);
+			LOG_DBG("Retry Sleep.");
+			k_sleep(DELAY_RESEND_S);
+			LOG_DBG("Slept.");
 			continue;
 		}
 		else if (ret < 0)
@@ -295,7 +306,9 @@ int lorawan_client_thread(void)
 //			LOG_INF("Data sent! (debug count %d) (tx payload bytes %d)", debug_count, sizeof(payload));
 		}
 
-		k_sleep(DELAY);
+		LOG_DBG("Loop Sleep.");
+		k_sleep(DELAY_MSG_S);
+		LOG_DBG("Slept.");
 
 #warning Updating triage status for debugging
 		if (++triage_status >= P3)
@@ -305,4 +318,4 @@ int lorawan_client_thread(void)
 	return 0;
 }
 
-K_THREAD_DEFINE(lorawan_client_id, 2048, lorawan_client_thread, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(lorawan_client_id, 8192, lorawan_client_thread, NULL, NULL, NULL, 7, 0, 0);
