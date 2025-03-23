@@ -215,6 +215,9 @@ int main(int aArgc, char *aArgv[])
 		return 0;
 	}
 
+	// Short delay to let the host detect the USB serial port
+	k_msleep(2000);
+
 #if defined(CONFIG_WAIT_FOR_CLI_CONNECTION)
 	LOG_INF("Waiting for host to be ready to communicate");
 
@@ -328,8 +331,6 @@ printk("I2C write to RGBW\n");
 	// Test ADC
 #ifdef CONFIG_ADC
 
-	k_msleep(5000);
-
 	if (!gpio_is_ready_dt(&flex_enable)) { 
 		LOG_ERR("Flex Enable pin not ready");
 	} else {
@@ -405,7 +406,7 @@ printk("I2C write to RGBW\n");
 		if (err < 0) {
 			LOG_WRN(" (value in mV not available)\n");
 		} else {
-			LOG_INF(" = %d mV", val_mv);
+//			LOG_INF(" = %d mV", val_mv);
 		}
 
 		/* 
@@ -415,9 +416,9 @@ printk("I2C write to RGBW\n");
 			>= 570 mV < 701 mV       1 cut		-	P2
 			>= 701 mV < 858 mV       2 cuts		-	P1
 			>= 858 mV < 1049 mV      3 cuts		-	NB
-			>= 1049 mV < 1282 mV     4 cuts		-	UNKNOWN
-			>= 1282 mV < 1594 mV     5 cuts		-	UNKNOWN
-			>= 1594 mV               6 cuts		-	UNKNOWN
+			>= 1049 mV < 1282 mV     4 cuts		-	DEAD
+			>= 1282 mV < 1594 mV     5 cuts		-	S1
+			>= 1594 mV               6 cuts		-	S2
 		*/
 		if(val_mv < 460) {
 			triage_status = FAULT;
@@ -430,39 +431,46 @@ printk("I2C write to RGBW\n");
 		} else if(val_mv >= 858 && val_mv < 1049) {
 			triage_status = NB;
 		} else if(val_mv >= 1049 && val_mv < 1282) {
-			triage_status = UNKNOWN;
+			triage_status = DEAD;
 		} else if(val_mv >= 1282 && val_mv < 1594) {
-			triage_status = UNKNOWN;
+			triage_status = S1;
 		} else if(val_mv >= 1594) {
-			triage_status = UNKNOWN;
+			triage_status = S2;
 		}
-
-		LOG_INF("Triage Status (%d)", triage_status);
 
 		switch(triage_status) {
 			case P3:
-				LOG_INF("P3");
+				LOG_INF("Triage Status: P3 (%d)", triage_status);
 				break;
 			case P2:
-				LOG_INF("P2");
+				LOG_INF("Triage Status: P2 (%d)", triage_status);
 				break;
 			case P1:
-				LOG_INF("P1");
+				LOG_INF("Triage Status: P1 (%d)", triage_status);
 				break;
 			case NB:
-				LOG_INF("NB");
+				LOG_INF("Triage Status: NB (%d)", triage_status);
 				break;
-			case UNKNOWN:
-				LOG_INF("UNKNOWN");
+			case DEAD:
+				LOG_INF("Triage Status: DEAD (%d)", triage_status);
+				break;
+			case S1:
+				LOG_INF("Triage Status: S1 (%d)", triage_status);
+				break;
+			case S2:
+				LOG_INF("Triage Status: S2 (%d)", triage_status);
 				break;
 			case UNUSED:
-				LOG_INF("UNUSED");
+				LOG_INF("Triage Status: UNUSED (%d)", triage_status);
 				break;
 			case FAULT:
-				LOG_INF("FAULT");
+				LOG_INF("Triage Status: FAULT (%d)", triage_status);
+				break;
+			default:
+				LOG_INF("Triage Status: UNKNOWN (%d)", triage_status);
 				break;
 		}
-		k_sleep(K_MSEC(1000));
+		k_sleep(K_MSEC(5000));
 	}
 #endif
 

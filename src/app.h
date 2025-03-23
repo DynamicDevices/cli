@@ -4,14 +4,16 @@
 #define VERSION 1
 
 enum TriageStatus {
-    NB = 0,
-    P1 = 1,
-    P2 = 2,
-    P3 = 3,
+    P3 = 0,
+    P2 = 1,
+    P1 = 2,
+    NB = 3,
+    DEAD = 4,
+    S1 = 5,
+    S2 = 6,
 
     FAULT = 0x80,
     UNUSED = 0x81,
-    
     UNKNOWN = 0xFF,
 };
 
