@@ -241,70 +241,49 @@ int main(int aArgc, char *aArgv[])
 
 	LOG_INF(WELCOME_TEXT);
 
-//#define DEBUG_SCAN_FOR_DEVICES
+	// RGB LED
+	uint32_t i2c_cfg = I2C_SPEED_SET(I2C_SPEED_STANDARD) | I2C_MODE_CONTROLLER;
 
-#ifdef DEBUG_SCAN_FOR_DEVICES
+	#define I2C_DEV_NODE DT_ALIAS(i2c2)
 
-	printk("The I2C scanner started\n");
-    const struct device *i2c_dev;
-    int error;
+	const struct device *const i2c_dev = DEVICE_DT_GET(I2C_DEV_NODE);
 
-	// Show I2C devices
-    i2c_dev = device_get_binding("I2C_2");
-    if (!i2c_dev) {
-        printk("Binding failed.");
-        return;
-    }
-
-    /* Demonstration of runtime configuration */
-    i2c_configure(i2c_dev, I2C_SPEED_SET(I2C_SPEED_STANDARD));
-    printk("Value of NRF_TWIM2->PSEL.SCL : %d \n",NRF_TWIM2->PSEL.SCL);
-    printk("Value of NRF_TWIM2->PSEL.SDA : %d \n",NRF_TWIM2->PSEL.SDA);
-    printk("Value of NRF_TWIM2->FREQUENCY: %d \n",NRF_TWIM2->FREQUENCY);
-    printk("26738688 -> 100k\n");
-
-    printk("Scanning for devices\n");
-
-	for (uint8_t i = 4; i <= 0x7F; i++) {
-        struct i2c_msg msgs[1];
-        uint8_t dst = 1;
-
-        msgs[0].buf = &dst;
-        msgs[0].len = 1U;
-        msgs[0].flags = I2C_MSG_WRITE | I2C_MSG_STOP;
-
-        error = i2c_transfer(i2c_dev, &msgs[0], 1, i);
-        if (error == 0) {
-            printk("0x%2x FOUND\n", i);
-        }
-        else {
-            //printk("error %d \n", error);
-        }
-    }
-
-	printk("Scan complete\n");
-
-#endif
-
-#if 0
-printk("I2C write to RGBW\n");
-{
-	struct i2c_msg msgs[1];
-	uint8_t dst[] = { 0x0A, 0x19 };
-
-	msgs[0].buf = &dst;
-	msgs[0].len = 2U;
-	msgs[0].flags = I2C_MSG_WRITE | I2C_MSG_STOP;
-
-	error = i2c_transfer(i2c_dev, &msgs[0], 2, 0x60);
-	if (error == 0) {
-		printk("I2C write success\n");
+	if (!device_is_ready(i2c_dev)) {
+		LOG_ERR("I2C device is not ready\n");
 	}
-	else {
-		printk("error %d \n", error);
+	/* 1. Verify i2c_configure() */
+	else if (i2c_configure(i2c_dev, i2c_cfg)) {
+		LOG_ERR("I2C config failed\n");
 	}
-}
-#endif
+
+	uint8_t datas[2];
+
+	// RGB LED setup
+	datas[0] = 0x0A;
+	datas[1] = 0x19;
+	i2c_write(i2c_dev, datas, 2, 0x60);
+	datas[0] = 0x0B;
+	datas[1] = 0x19;
+	i2c_write(i2c_dev, datas, 2, 0x60);
+	datas[0] = 0x0C;
+	datas[1] = 0x19;
+	i2c_write(i2c_dev, datas, 2, 0x60);
+	datas[0] = 0x0D;
+	datas[1] = 0x19;
+	i2c_write(i2c_dev, datas, 2, 0x60);
+
+	while(1)
+	{
+		// Colours
+		datas[0] = 0x01;
+		datas[1] = 0x0B;
+		i2c_write(i2c_dev, datas, 2, 0x60);
+		k_sleep(K_MSEC(1000));
+		datas[0] = 0x01;
+		datas[1] = 0x00;
+		i2c_write(i2c_dev, datas, 2, 0x60);
+		k_sleep(K_MSEC(1000));
+	}
 
 #if 0 // ACC
 
@@ -328,8 +307,8 @@ printk("I2C write to RGBW\n");
 	
 #endif // ACC
 
-	// Test ADC
-#ifdef CONFIG_ADC
+	// Test Flex Strap
+#ifdef X_CONFIG_ADC
 
 	if (!gpio_is_ready_dt(&flex_enable)) { 
 		LOG_ERR("Flex Enable pin not ready");

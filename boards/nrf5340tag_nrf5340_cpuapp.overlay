@@ -22,6 +22,7 @@
 
 	aliases {
 		lora0 = &lora;
+		i2c2 = &i2c2;
 	};
 
 	zephyr,user {
@@ -102,7 +103,7 @@
 	// NOTE: Need to add in interrupts
 
 	// LED I2C bus
-	i2c2_rgb_default: i2c1_rgb_default {
+	i2c2_rgb_default: i2c2_rgb_default {
 		group1 {
 			psels = <NRF_PSEL(TWIM_SDA, 0, 29)>,
 				<NRF_PSEL(TWIM_SCL, 0, 28)>;
@@ -168,6 +169,8 @@
 
 // Support for accelerometer
 
+/*
+
 &i2c2 {
 	compatible = "nordic,nrf-twim";
 	status = "okay";
@@ -184,9 +187,9 @@
 //	};
 };
 
-// RGB LED
+*/
 
-/*
+// RGB LED
 
 &i2c2 {
 	compatible = "nordic,nrf-twim";
@@ -196,8 +199,6 @@
 	pinctrl-names = "default", "sleep";
 	clock-frequency = <100000>;	
 };
-
-*/
 
 // We need to disable components we aren't using as they share resources
 
