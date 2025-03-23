@@ -4,10 +4,15 @@
 #define VERSION 1
 
 enum TriageStatus {
-    P0 = 0,
+    NB = 0,
     P1 = 1,
     P2 = 2,
-    P3 = 3
+    P3 = 3,
+
+    FAULT = 0x80,
+    UNUSED = 0x81,
+    
+    UNKNOWN = 0xFF,
 };
 
 extern int32_t whole_celsius;

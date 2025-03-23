@@ -57,6 +57,8 @@ static enum MQTTSN_CLIENT_STATE _eMQTTSNClientState = STATE_NONE;
 int32_t whole_celsius = 0;
 uint8_t fraction_celsius = 0;
 
+extern enum TriageStatus triage_status;
+
 // Functions
 
 LOG_MODULE_REGISTER(mqttsn, CONFIG_MQTT_SNCLIENT_LOG_LEVEL);
@@ -325,7 +327,6 @@ void mqttsnPublishWorkHandler(struct k_work *work)
 
         const char* role = otThreadDeviceRoleToString(otThreadGetDeviceRole(instance));
         static int debug_count = 0;
-        enum TriageStatus triage_status = P0;
         int battery_percentage = 100;
 
 #if 0

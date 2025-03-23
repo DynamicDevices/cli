@@ -15,6 +15,7 @@
 #include <zephyr/drivers/lora.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/sys/reboot.h>
+#include <zephyr/drivers/gpio.h>
 
 #include <openthread/platform/logging.h>
 #include "openthread/instance.h"
@@ -28,6 +29,7 @@
 
 #include "utils.h"
 #include "mqttsn.h"
+#include "app.h"
 #include "app_bluetooth.h"
 #include "gpio.h"
 
@@ -47,6 +49,10 @@ LOG_MODULE_REGISTER(cli_main, CONFIG_OT_COMMAND_LINE_INTERFACE_LOG_LEVEL);
     "Starting INST CLI build: " __DATE__ " " __TIME__ "\n\r"\
 	"NCS stack: " NCS_VERSION_STRING "\n\r"\
 	"\n\r"\
+
+// Statics
+
+enum TriageStatus triage_status = UNKNOWN;
 
 // Functions
 
@@ -161,9 +167,33 @@ static void test_polling_mode(const struct device *dev)
 // Main Function
 
 #ifdef CONFIG_ADC
-static const struct gpio_dt_spec flexi_en = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+
+#define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
+
+const struct gpio_dt_spec flex_enable = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, flex_enable_gpios);
+
+#if NCS_VERSION_NUMBER >= 0x20901
 
 static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
+
+#else
+
+#if !DT_NODE_EXISTS(DT_PATH(zephyr_user)) || \
+        !DT_NODE_HAS_PROP(DT_PATH(zephyr_user), io_channels)
+#error "No suitable devicetree overlay specified"
+#endif
+
+#define DT_SPEC_AND_COMMA(node_id, prop, idx) \
+        ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
+
+/* Data of ADC io-channels specified in devicetree. */
+static const struct adc_dt_spec adc_channels[] = {
+        DT_FOREACH_PROP_ELEM(DT_PATH(zephyr_user), io_channels,
+                             DT_SPEC_AND_COMMA)
+};
+
+#endif
+
 #endif
 
 int main(int aArgc, char *aArgv[])
@@ -298,21 +328,39 @@ printk("I2C write to RGBW\n");
 	// Test ADC
 #ifdef CONFIG_ADC
 
-    // Setup ADC VREF pin
-	if (!gpio_is_ready_dt(&flexi_en)) {
-		LOG_ERR("Flexi EN not ready");
-		return 0;
+	k_msleep(5000);
+
+	if (!gpio_is_ready_dt(&flex_enable)) { 
+		LOG_ERR("Flex Enable pin not ready");
+	} else {
+		if ( gpio_pin_configure_dt(&flex_enable, GPIO_OUTPUT_INACTIVE) < 0 ) {
+			LOG_ERR("Can't configure Flex Enable pin");
+		} else {
+			if ( gpio_pin_set_dt(&flex_enable, 1)  < 0) {
+				LOG_ERR("Can't set Flex Enable pin HI");
+			}
+			else {
+				LOG_INF("Flex Enable pin set HI");
+			}
+		}
 	}
-	gpio_pin_configure_dt(&flexi_en, GPIO_OUTPUT);
-	gpio_pin_set_dt(&flexi_en, 1);
-	
+
 	// Now setup ADC channel
+#if NCS_VERSION_NUMBER < 0x20901
+	if (!device_is_ready(adc_channels[0].dev)) {
+		LOG_ERR("ADC controller device %s not ready", adc_channels[0].dev->name);
+	#else
 	if (!adc_is_ready_dt(&adc_channel)) {
 		LOG_ERR("ADC controller device %s not ready", adc_channel.dev->name);
+#endif
 		return 0;
 	}
 
+#if NCS_VERSION_NUMBER < 0x20901
+	int err = adc_channel_setup_dt(&adc_channels[0]);
+#else
 	int err = adc_channel_setup_dt(&adc_channel);
+#endif
 	if (err < 0) {
 		LOG_ERR("Could not setup channel #%d (%d)", 0, err);
 		return 0;
@@ -327,7 +375,11 @@ printk("I2C write to RGBW\n");
 		//.calibrate = true,
 	};
 
+#if NCS_VERSION_NUMBER < 0x20901
+	err = adc_sequence_init_dt(&adc_channels[0], &sequence);
+#else
 	err = adc_sequence_init_dt(&adc_channel, &sequence);
+#endif
 	if (err < 0) {
 		LOG_ERR("Could not initialise sequnce");
 		return 0;
@@ -336,21 +388,80 @@ printk("I2C write to RGBW\n");
 	// ADC
 	while(1) 
 	{
+#if NCS_VERSION_NUMBER < 0x20901
+		err = adc_read(adc_channels[0].dev, &sequence);
+#else
 		err = adc_read(adc_channel.dev, &sequence);
+#endif
 		if (err < 0) {
 			LOG_ERR("Could not read (%d)", err);
 			continue;
 		}
 	
-		int32_t val_mv;
-		err = adc_raw_to_millivolts_dt(&adc_channel, &val_mv);
-		/* conversion to mV may not be supported, skip if not */
+//		LOG_INF("ADC value: %d", buf);
+
+		int32_t val_mv = buf;
+		err = adc_raw_to_millivolts	(	600, ADC_GAIN_1_3, 12, &val_mv);
 		if (err < 0) {
 			LOG_WRN(" (value in mV not available)\n");
 		} else {
 			LOG_INF(" = %d mV", val_mv);
 		}
-			
+
+		/* 
+			< 460 mV there's possibly a fault with the flexi - FAULT
+
+			>= 460 mV < 570 mV       no cuts	-	P3
+			>= 570 mV < 701 mV       1 cut		-	P2
+			>= 701 mV < 858 mV       2 cuts		-	P1
+			>= 858 mV < 1049 mV      3 cuts		-	NB
+			>= 1049 mV < 1282 mV     4 cuts		-	UNKNOWN
+			>= 1282 mV < 1594 mV     5 cuts		-	UNKNOWN
+			>= 1594 mV               6 cuts		-	UNKNOWN
+		*/
+		if(val_mv < 460) {
+			triage_status = FAULT;
+		} else if(val_mv >= 460 && val_mv < 570) {
+			triage_status = P3;
+		} else if(val_mv >= 570 && val_mv < 701) {
+			triage_status = P2;
+		} else if(val_mv >= 701 && val_mv < 858) {
+			triage_status = P1;
+		} else if(val_mv >= 858 && val_mv < 1049) {
+			triage_status = NB;
+		} else if(val_mv >= 1049 && val_mv < 1282) {
+			triage_status = UNKNOWN;
+		} else if(val_mv >= 1282 && val_mv < 1594) {
+			triage_status = UNKNOWN;
+		} else if(val_mv >= 1594) {
+			triage_status = UNKNOWN;
+		}
+
+		LOG_INF("Triage Status (%d)", triage_status);
+
+		switch(triage_status) {
+			case P3:
+				LOG_INF("P3");
+				break;
+			case P2:
+				LOG_INF("P2");
+				break;
+			case P1:
+				LOG_INF("P1");
+				break;
+			case NB:
+				LOG_INF("NB");
+				break;
+			case UNKNOWN:
+				LOG_INF("UNKNOWN");
+				break;
+			case UNUSED:
+				LOG_INF("UNUSED");
+				break;
+			case FAULT:
+				LOG_INF("FAULT");
+				break;
+		}
 		k_sleep(K_MSEC(1000));
 	}
 #endif

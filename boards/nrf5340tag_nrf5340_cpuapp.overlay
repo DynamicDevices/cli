@@ -24,10 +24,16 @@
 		lora0 = &lora;
 	};
 
-	GNSS: zephyr,user {
+	zephyr,user {
+
+		// GNSS
 		gnss_vbckp_on-gpios = <&gpio0 5 0>;
 		gnss_vcc_on-gpios = <&gpio1 0 0>;
 		gnss_reset-gpios = <&gpio1 6 0>;
+
+		// ADC
+		flex_enable-gpios = <&gpio1 5 0>;
+		io-channels = <&adc 0>;
 	};
 };
 
@@ -96,14 +102,14 @@
 	// NOTE: Need to add in interrupts
 
 	// LED I2C bus
-	i2c2_default: i2c1_default {
+	i2c2_rgb_default: i2c1_rgb_default {
 		group1 {
 			psels = <NRF_PSEL(TWIM_SDA, 0, 29)>,
 				<NRF_PSEL(TWIM_SCL, 0, 28)>;
 		};
 	};
 
-	i2c2_sleep: i2c2_sleep {
+	i2c2_rgb_sleep: i2c2_rgb_sleep {
 		group1 {
 			psels = <NRF_PSEL(TWIM_SDA, 0, 29)>,
 				<NRF_PSEL(TWIM_SCL, 0, 28)>;
@@ -112,22 +118,22 @@
 	};
 
 	// ACCELEROMETER is on I2C2
-/*
-	i2c2_default: i2c2_default {
+
+	i2c2_acc_default: i2c2_acc_default {
 		group1 {
 			psels = <NRF_PSEL(TWIM_SDA, 0, 30)>,
 				<NRF_PSEL(TWIM_SCL, 0, 31)>;
 		};
 	};
 
-	i2c2_sleep: i2c2_sleep {
+	i2c2_acc_sleep: i2c2_acc_sleep {
 		group1 {
 			psels = <NRF_PSEL(TWIM_SDA, 0, 30)>,
 				<NRF_PSEL(TWIM_SCL, 0, 31)>;
 			low-power-enable;
 		};
 	};
-*/
+
 };
 
 // NOTE: We need to disable components we aren't using as they share resources
@@ -153,40 +159,45 @@
 // NOTE: We need to disable components we aren't using as they share resources
 
 &i2c0 {
+	status = "disabled";
 };
 
 &i2c1 {
 	status = "disabled";
 };
 
-/* Support for accelerometer
+// Support for accelerometer
 
-&i2c2 {
-	compatible = "nordic,nrf-twim";
-	status = "disabled";
-	pinctrl-0 = <&i2c2_default>;
-	pinctrl-1 = <&i2c2_sleep>;
-	pinctrl-names = "default", "sleep";
-	clock-frequency = <100000>;	
-
-	lsm6dso16is: lsm6dso16is@6a {
-		compatible = "st,lsm6dso16is";
-		status = "okay";
-		reg = <0x6a>;
-//		irq-gpios = <&gpiof 3 GPIO_ACTIVE_HIGH>;
-	};
-};
-*/
-
-// RGB LED
 &i2c2 {
 	compatible = "nordic,nrf-twim";
 	status = "okay";
-	pinctrl-0 = <&i2c2_default>;
-	pinctrl-1 = <&i2c2_sleep>;
+	pinctrl-0 = <&i2c2_acc_default>;
+	pinctrl-1 = <&i2c2_acc_sleep>;
+	pinctrl-names = "default", "sleep";
+	clock-frequency = <100000>;	
+
+//	lsm6dso16is: lsm6dso16is@6a {
+//		compatible = "st,lsm6dso16is";
+//		status = "okay";
+//		reg = <0x6a>;
+////		irq-gpios = <&gpiof 3 GPIO_ACTIVE_HIGH>;
+//	};
+};
+
+// RGB LED
+
+/*
+
+&i2c2 {
+	compatible = "nordic,nrf-twim";
+	status = "okay";
+	pinctrl-0 = <&i2c2_rgb_default>;
+	pinctrl-1 = <&i2c2_rgb_sleep>;
 	pinctrl-names = "default", "sleep";
 	clock-frequency = <100000>;	
 };
+
+*/
 
 // We need to disable components we aren't using as they share resources
 
@@ -237,28 +248,18 @@
 	};
 };
 
-/ {
-	zephyr,user {
-		io-channels = <&adc 0>;
-	};
-};
-
 &adc {
 	#address-cells = <1>;
 	#size-cells = <0>;
 	status = "okay";
 	channel@0 {
 		reg = <0>;
-		zephyr,gain = "ADC_GAIN_1_4";
-		zephyr,reference = "ADC_REF_VDD_1_4";
+//		zephyr,gain = "ADC_GAIN_1_4";
+		zephyr,gain = "ADC_GAIN_1_3";
+//		zephyr,reference = "ADC_REF_VDD_1_4";
+		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
 		zephyr,input-positive = <NRF_SAADC_AIN0>; /* P0.02 for nRF52xx, P0.04 for nRF5340 */
 		zephyr,resolution = <12>;
 	};
-};
-
-&led0 {
-	status = "okay";
-	label = "Flexi EN";
-	gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;
 };

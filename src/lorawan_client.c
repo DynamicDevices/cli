@@ -228,7 +228,7 @@ int lorawan_client_thread(void)
 #endif
 
 	int debug_count = 0;
-	enum TriageStatus triage_status = P0;
+	extern enum TriageStatus triage_status; // In main.c
 	int battery_percentage = 100;
 
 	// Set GNSS callback
@@ -313,12 +313,13 @@ int lorawan_client_thread(void)
 		k_sleep(DELAY_MSG_S);
 		LOG_DBG("Slept.");
 
-#warning Updating triage status for debugging
-		if (++triage_status >= P3)
-			triage_status = P0;
+//#warning Updating triage status for debugging
+//		if (++triage_status >= P3)
+//			triage_status = P0;
 	}
 
 	return 0;
 }
 
-K_THREAD_DEFINE(lorawan_client_id, 8192, lorawan_client_thread, NULL, NULL, NULL, 7, 0, 0);
+#warning DISABLED THREAD
+//K_THREAD_DEFINE(lorawan_client_id, 8192, lorawan_client_thread, NULL, NULL, NULL, 7, 0, 0);
