@@ -46,6 +46,9 @@
 #define MP3320A_BLK_PWM                         0x02
 #define MP3320A_EN_CP                           0x01
 
+#define BLINK_SLOW                              0x80
+#define BLINK_FAST                              0x01
+
 // Statics
 
 LOG_MODULE_REGISTER(leds, CONFIG_LED_LOG_LEVEL);
@@ -146,6 +149,44 @@ bool ledsTest()
 	k_sleep(K_MSEC(500));
 	ledsWriteRGBW(LEDS_MAX_VAL, 0, 0, 0);
     ledsWriteBlink(BLINK_SLOW, 0x03, BLINK_CYCLES_FOREVER);
+
+    return true;
+}
+
+
+bool ledBlink(EnumLedBlinkColour colour, EnumLedBlinkSpeed speed, uint8_t cycles)
+{
+    LOG_DBG("Blinking LED %d at speed %d for %d cycles", colour, speed, cycles);
+
+    switch(colour)
+    {
+        case RED:
+            ledsWriteRGBW(LEDS_MAX_VAL, 0, 0, 0);
+            break;
+        case GREEN:
+            ledsWriteRGBW(0, LEDS_MAX_VAL, 0, 0);
+            break;
+        case BLUE:
+            ledsWriteRGBW(0, 0, LEDS_MAX_VAL, 0);
+            break;
+        case WHITE:
+            ledsWriteRGBW(0, 0, 0, LEDS_MAX_VAL);
+            break;
+        default:
+            return false;
+    }
+
+    switch(speed)
+    {
+        case LED_BLINK_SLOW:
+            ledsWriteBlink(BLINK_FAST, DUTY_10, cycles);
+            break;
+        case LED_BLINK_FAST:
+            ledsWriteBlink(BLINK_SLOW, DUTY_10, cycles);
+            break;
+        default:
+            return false;
+    }
 
     return true;
 }
