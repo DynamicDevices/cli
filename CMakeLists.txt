@@ -14,13 +14,15 @@ target_sources(app PRIVATE  src/main.c
                             src/utils.c
                             src/mqttsn.c
                             src/gpio.c
+                            src/leds.c
+                            src/nvs.c
+                            src/flexstrap.c
+                            src/acc.c
                             src/openthread_client.c
                             src/lorawan_client.c
                             src/gpsparser.c
                             src/minmea.c
-                            src/nvs.c
                             src/app_bluetooth.c
-                            src/leds.c
                             src/bluetooth/lns_client.c)
 # NORDIC SDK APP END
 

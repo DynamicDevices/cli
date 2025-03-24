@@ -169,8 +169,14 @@ bool ledColour(EnumLedBlinkColour colour)
         case BLUE:
             ledWriteRGBW(0, 0, LED_MAX_BRIGHTNESS, 0);
             break;
+        case ORANGE:
+            ledWriteRGBW(255, 165, 0, LED_MAX_BRIGHTNESS);
+            break;
+        case YELLOW:
+            ledWriteRGBW(255, 255, 0, LED_MAX_BRIGHTNESS);
+            break;
         case WHITE:
-            ledWriteRGBW(0, 0, 0, LED_MAX_BRIGHTNESS);
+            ledWriteRGBW(255, 255, 255, LED_MAX_BRIGHTNESS);
             break;
         default:
             return false;
@@ -215,7 +221,6 @@ bool ledTest()
 
 	k_sleep(K_MSEC(500));
 	ledWriteRGBW(LED_MAX_BRIGHTNESS, 0, 0, 0);
-    ledBlink(RED, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
 
     return true;
 }

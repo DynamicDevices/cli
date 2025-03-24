@@ -29,6 +29,8 @@ enum LedBlinkColour
     GREEN = 0x02,
     BLUE = 0x03,    
     WHITE = 0x04,
+    YELLOW = 0x05,
+    ORANGE = 0x06,
 };
 typedef enum LedBlinkColour EnumLedBlinkColour;
 

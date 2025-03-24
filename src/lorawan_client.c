@@ -28,6 +28,7 @@
 #include "app.h"
 #include "nvs.h"
 #include "gpsparser.h"
+#include "flexstrap.h"
 
 #include "lorawan_client.h"
 
@@ -312,10 +313,6 @@ int lorawan_client_thread(void)
 		LOG_DBG("Loop Sleep.");
 		k_sleep(DELAY_MSG_S);
 		LOG_DBG("Slept.");
-
-//#warning Updating triage status for debugging
-//		if (++triage_status >= P3)
-//			triage_status = P0;
 	}
 
 	return 0;
