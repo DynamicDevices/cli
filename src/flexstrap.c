@@ -136,6 +136,9 @@ int flexstrap_thread(void)
 
     flexStrapInit();
 
+    // Wait for the main loop to setup
+    k_sleep(K_MSEC(5000));
+
 #if NCS_VERSION_NUMBER < 0x20901
 	err = adc_sequence_init_dt(&adc_channels[0], &sequence);
 #else
@@ -209,27 +212,27 @@ int flexstrap_thread(void)
                 case P3:
                     // Green
                     LOG_DBG("- setting LED to SLOW Green");
-                    ledBlink(WHITE, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
+                    ledBlink(GREEN, LED_BLINK_SLOW, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
                     break;
                 case P2:
                     // Yellow
                     LOG_DBG("- setting LED to SLOW Yellow");
-                    ledBlink(YELLOW, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
+                    ledBlink(YELLOW, LED_BLINK_SLOW, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
                     break;
                 case P1:
-                    // Orange
-                    LOG_DBG("- setting LED to SLOW Orange");
-                    ledBlink(ORANGE, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
-                    break;
-                case NB:
-                    // Blue
-                    LOG_DBG("- setting LED to SLOW Blue");
-                    ledBlink(BLUE, LED_BLINK_SLOW, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
-                    break;
-                case DEAD:
                     // Red
                     LOG_DBG("- setting LED to SLOW Red");
                     ledBlink(RED, LED_BLINK_SLOW, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
+                    break;
+                case NB:
+                    // Purple
+                    LOG_DBG("- setting LED to SLOW PURPLE");
+                    ledBlink(PURPLE, LED_BLINK_SLOW, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
+                    break;
+                case DEAD:
+                    // White
+                    LOG_DBG("- setting LED to SLOW WHITE");
+                    ledBlink(WHITE, LED_BLINK_SLOW, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
                     break;
                 case S1:
                     // White
@@ -238,8 +241,8 @@ int flexstrap_thread(void)
                     break;
                 case S2:
                     // White
-                    LOG_DBG("- setting LED to FAST White");
-                    ledBlink(WHITE, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
+//                    LOG_DBG("- setting LED to FAST White");
+//                    ledBlink(WHITE, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
                     break;
                 case FAULT:
                     // Flash Red
@@ -249,16 +252,17 @@ int flexstrap_thread(void)
                 case UNUSED:
                     // Flash Red
                     LOG_DBG("- setting LED to FAST RED");
-                    ledBlink(WHITE, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
+                    ledBlink(RED, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
                     break;
                 case UNKNOWN:
                     // Flash Red
                     LOG_DBG("- setting LED to FAST RED");
-                    ledBlink(WHITE, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
+                    ledBlink(RED, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
                     break;
                 default:
                     // Flash Red
                     LOG_DBG("- setting LED to FAST RED");
+                    ledBlink(RED, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
                     break;
             }
         }

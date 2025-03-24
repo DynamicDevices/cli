@@ -29,7 +29,7 @@
 #include "nvs.h"
 #include "gpsparser.h"
 #include "flexstrap.h"
-
+#include "leds.h"
 #include "lorawan_client.h"
 
 // #define DELAY K_SECONDS(30)
@@ -169,17 +169,21 @@ int lorawan_client_thread(void)
 	// Set duty cycle again as we get duty cycle restricted join failures here?
 	LoRaMacTestSetDutyCycleOn( false );
 
+#if 1
+
 	do
 	{
+		ledSetColourAndWaitMs(CYAN, 500);
+
 		LOG_INF("Joining network using OTAA, dev nonce %d, attempt %d: ", join_cfg.otaa.dev_nonce, i++);
 		ret = lorawan_join(&join_cfg);
-		if (ret < 0) {
-			if ((ret =-ETIMEDOUT)) {
-				LOG_WRN("Timed-out waiting for response.");
-			} else {
-				LOG_WRN("Join failed (error %d) (count %d)", ret, join_fail_count);
-			}
+		LOG_DBG("Join returned %d", ret);
 
+		if (ret < 0) {
+			LOG_WRN("Error waiting for response (%d)", ret);
+
+			ledSetColourAndWaitMs(RED, 500);
+			
 			// Even when we have set the duty cycle off we can fail with join duty cycle restriction.
 			// If we fail due to restricted duty cycle we'll see a timeout error. (!)
 			if(++join_fail_count > 5) {
@@ -195,6 +199,7 @@ int lorawan_client_thread(void)
 
 		} else {
 			LOG_INF("Join successful.");
+			ledSetColourAndWaitMs(GREEN, 500);
 		}
 
 		// Increment DevNonce as per LoRaWAN 1.0.4 Spec.
@@ -228,8 +233,10 @@ int lorawan_client_thread(void)
 	}
 #endif
 
+#endif
+
 	int debug_count = 0;
-	extern enum TriageStatus triage_status; // In main.c
+	extern EnumTriageStatus _last_triage_status; // In main.c
 	int battery_percentage = 100;
 
 	// Set GNSS callback
@@ -257,7 +264,13 @@ int lorawan_client_thread(void)
 		payload[0] = VERSION;
 
 		// Byte 1 - triageStatus [1]
-		payload[1] = triage_status;
+		if(_last_triage_status > DEAD)
+		{
+			LOG_WRN("Invalid triage status %d - forcing P3 (0)", _last_triage_status);
+			payload[1] = _last_triage_status;
+		}
+		else
+			payload[1] = P3;
 
 		// Byte 2 - batteryPercentage [1]
 		payload[2] = battery_percentage;
@@ -289,27 +302,33 @@ int lorawan_client_thread(void)
 		memcpy(&payload[5 + sizeof(struct minmea_sentence_gga)], &last_gst, sizeof(struct minmea_sentence_gst));
 #endif
 
+		if(last_gga.fix_quality > 0) {
+			ledSetColourAndWaitMs(MAGENTA, 150);
+			ledSetColourAndWaitMs(WHITE, 200);
+			ledSetColourAndWaitMs(MAGENTA, 150);
+		} else
+			ledSetColourAndWaitMs(MAGENTA, 500);
+		
 		// TODO: Need to have a look at this. It seems to take 7-8s to send a message
 		LOG_INF("lorawan_send %d bytes", sizeof(payload));
 		ret = lorawan_send(LORAWAN_PORT, payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
-		if (ret == -EAGAIN)
+		if (ret < 0)
 		{
 			LOG_WRN("lorawan_send failed: %d. Continuing...", ret);
+			ledSetColourAndWaitMs(RED, 500);
+	
 			LOG_DBG("Retry Sleep.");
 			k_sleep(DELAY_RESEND_S);
 			LOG_DBG("Slept.");
+
 			continue;
-		}
-		else if (ret < 0)
-		{
-			LOG_WRN("lorawan_send failed: %d", ret);
-			//			return -1;
 		}
 		else
 		{
-//			LOG_INF("Data sent! (debug count %d) (tx payload bytes %d)", debug_count, sizeof(payload));
+			LOG_DBG("Data sent! (debug count %d) (tx payload bytes %d)", debug_count, sizeof(payload));
+			ledSetColourAndWaitMs(GREEN, 500);
 		}
-
+		
 		LOG_DBG("Loop Sleep.");
 		k_sleep(DELAY_MSG_S);
 		LOG_DBG("Slept.");
@@ -318,5 +337,4 @@ int lorawan_client_thread(void)
 	return 0;
 }
 
-#warning DISABLED THREAD
-//K_THREAD_DEFINE(lorawan_client_id, 8192, lorawan_client_thread, NULL, NULL, NULL, 7, 0, 0);
+K_THREAD_DEFINE(lorawan_client_id, 8192, lorawan_client_thread, NULL, NULL, NULL, 7, 0, 0);

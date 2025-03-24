@@ -8,7 +8,8 @@
 
 // Defines
 
-#define LED_MAX_BRIGHTNESS                      0x7FF
+#define LED_MAX_BRIGHTNESS                      (0x7FF/8) // Limit max brightness
+#define LED_WHITE_MAX_BRIGHTNESS                (0x7FF/16) // Limit max brightness
 
 #define BLINK_CYCLES_FOREVER                    0x00
 
@@ -31,6 +32,10 @@ enum LedBlinkColour
     WHITE = 0x04,
     YELLOW = 0x05,
     ORANGE = 0x06,
+    PURPLE = 0x07,
+    CYAN = 0x08,
+    MAGENTA = 0x09,
+    HOT_PINK = 0x0A,
 };
 typedef enum LedBlinkColour EnumLedBlinkColour;
 
@@ -47,5 +52,6 @@ bool ledTest();
 bool ledBlink(EnumLedBlinkColour colour, EnumLedBlinkSpeed speed, EnumLedBlinkDuty duty_percentage, uint8_t cycles);
 bool ledColour(EnumLedBlinkColour colour);
 bool ledWriteRGBW(uint16_t red, uint16_t green, uint16_t blue, uint16_t white);
+bool ledSetColourAndWaitMs(EnumLedBlinkColour colour, uint16_t delay_ms);
 
 #endif

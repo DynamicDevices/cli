@@ -76,14 +76,14 @@ bool ledWriteReg(const struct device *i2c_dev, uint8_t reg, uint8_t val)
 
 bool ledWriteRGBW(uint16_t red, uint16_t green, uint16_t blue, uint16_t white)
 {
-    LOG_DBG("Writing to LED R 0x%X, G 0x%X, G 0x%X, W 0x%X", red, green, blue, white);
+    LOG_DBG("Writing to LED R 0x%03X, G 0x%03X, G 0x%03X, W 0x%03X", red, green, blue, white);
 
     _lastBlink = false;
     _lastRed = red;
     _lastGreen = green;
     _lastBlue = blue;
     _lastWhite = white;
-
+    
     // Set driver colour mode
     ledWriteReg(i2c_dev, MP3320A_REG_BLINKING_MODE, MP3320A_EN | MP3320A_BLK_PWM | MP3320A_EN_CP);
 
@@ -105,7 +105,7 @@ bool ledWriteRGBW(uint16_t red, uint16_t green, uint16_t blue, uint16_t white)
 
 bool ledWriteBlink(uint8_t freq, uint8_t duty, uint8_t cycles)
 {
-    LOG_DBG("Writing to LEDS Blink Freq 0x%X, Duty 0x%X, Cycles 0x%X", freq, duty, cycles);
+    LOG_DBG("Writing to LEDS Blink Freq %d, Duty %d, Cycles %d", freq, duty, cycles);
 
     _lastBlink = true;
     _lastFreq = freq;
@@ -169,14 +169,28 @@ bool ledColour(EnumLedBlinkColour colour)
         case BLUE:
             ledWriteRGBW(0, 0, LED_MAX_BRIGHTNESS, 0);
             break;
+        case PURPLE:
+            ledWriteRGBW(LED_MAX_BRIGHTNESS/2, 0, LED_MAX_BRIGHTNESS/2, 0);
+            break;
         case ORANGE:
-            ledWriteRGBW(255, 165, 0, LED_MAX_BRIGHTNESS);
+            // (165/255)*LED_MAX_BRIGHTNESS
+            ledWriteRGBW(LED_MAX_BRIGHTNESS, 1240, 0, 0);
             break;
         case YELLOW:
-            ledWriteRGBW(255, 255, 0, LED_MAX_BRIGHTNESS);
+            ledWriteRGBW(LED_MAX_BRIGHTNESS, LED_MAX_BRIGHTNESS, 0, 0);
+            break;
+        case CYAN:
+            ledWriteRGBW(0, LED_MAX_BRIGHTNESS, LED_MAX_BRIGHTNESS, 0);
+            break;
+        case MAGENTA:
+            ledWriteRGBW(LED_MAX_BRIGHTNESS, 0, LED_MAX_BRIGHTNESS, 0);
+            break;
+        case HOT_PINK:
+            // (255,105,180)
+            ledWriteRGBW(LED_MAX_BRIGHTNESS, (105*LED_MAX_BRIGHTNESS/255), (180*LED_MAX_BRIGHTNESS/255), 0);
             break;
         case WHITE:
-            ledWriteRGBW(255, 255, 255, LED_MAX_BRIGHTNESS);
+            ledWriteRGBW(0, 0, 0, LED_WHITE_MAX_BRIGHTNESS);
             break;
         default:
             return false;
@@ -197,17 +211,35 @@ bool ledBlink(EnumLedBlinkColour colour, EnumLedBlinkSpeed speed, EnumLedBlinkDu
     return true;
 }
 
-bool ledPopLastSettings()
+bool ledSetColourAndWaitMs(EnumLedBlinkColour colour, uint16_t delay_ms)
 {
-    ledWriteRGBW(_lastRed, _lastGreen, _lastBlue, _lastWhite);
+    LOG_DBG("Setting LED %d and waiting %d ms", colour, delay_ms);
 
-    if(_lastBlink)
-        ledWriteBlink(_lastFreq, _lastDuty, _lastCycles);
+    uint16_t red = _lastRed;
+    uint16_t green = _lastGreen;
+    uint16_t blue = _lastBlue;
+    uint16_t white = _lastWhite;
+
+    bool blink = _lastBlink;
+    uint8_t freq = _lastFreq;
+    uint8_t duty = _lastDuty;
+    uint8_t cycles = _lastCycles;
+
+    ledColour(colour);
+
+    k_sleep(K_MSEC(delay_ms));
+
+    ledWriteRGBW(red, green,blue, white);
+    if(blink)
+        ledWriteBlink(freq, duty, cycles);
 
     return true;
 }
+
 bool ledTest()
 {
+    LOG_DBG("Testing LED");
+
     // Cycle through R->G>B>W
     ledWriteRGBW(LED_MAX_BRIGHTNESS, 0, 0, 0);
 	k_sleep(K_MSEC(500));
@@ -215,12 +247,9 @@ bool ledTest()
 	k_sleep(K_MSEC(500));
 	ledWriteRGBW(0, 0, LED_MAX_BRIGHTNESS, 0);
 	k_sleep(K_MSEC(500));
-	ledWriteRGBW(0, 0, 0, LED_MAX_BRIGHTNESS);
+	ledWriteRGBW(0, 0, 0, LED_WHITE_MAX_BRIGHTNESS);
 	k_sleep(K_MSEC(500));
 	ledWriteRGBW(0, 0, 0, 0);
-
-	k_sleep(K_MSEC(500));
-	ledWriteRGBW(LED_MAX_BRIGHTNESS, 0, 0, 0);
 
     return true;
 }

@@ -104,9 +104,6 @@ int main(int aArgc, char *aArgv[])
 	// Do a quick test cycle
 	ledTest();
 
-	// Set to blink WHITE fast
-    ledBlink(WHITE, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
-
 	// Start Bluetooth
 // CHECK LOCKUP
 //    appbluetoothInit();
@@ -119,6 +116,7 @@ int main(int aArgc, char *aArgv[])
 
 void mpsl_assert_handle(const char * const file, const uint32_t line)
 {
-	LOG_WRN("Error");
+	ledBlink(RED, LED_BLINK_FAST, DUTY_10_PERCENT, 0);
+
 	sys_reboot(SYS_REBOOT_COLD);
 }
