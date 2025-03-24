@@ -20,6 +20,7 @@ target_sources(app PRIVATE  src/main.c
                             src/minmea.c
                             src/nvs.c
                             src/app_bluetooth.c
+                            src/leds.c
                             src/bluetooth/lns_client.c)
 # NORDIC SDK APP END
 

@@ -32,6 +32,7 @@
 #include "app.h"
 #include "app_bluetooth.h"
 #include "gpio.h"
+#include "leds.h"
 
 #if defined(CONFIG_CLI_SAMPLE_LOW_POWER)
 #include "low_power.h"
@@ -44,18 +45,16 @@
 LOG_MODULE_REGISTER(cli_main, CONFIG_OT_COMMAND_LINE_INTERFACE_LOG_LEVEL);
 
 #define WELCOME_TEXT \
-	"\n\r"\
-	"\n\r"\
-    "Starting INST CLI build: " __DATE__ " " __TIME__ "\n\r"\
-	"NCS stack: " NCS_VERSION_STRING "\n\r"\
-	"\n\r"\
+	"\r\n"\
+	"*********************************************\r\n" \
+    "Starting INST CLI build: " __DATE__ " " __TIME__ "\r\n"\
+	"NCS stack: " NCS_VERSION_STRING "\r\n"\
 
 // Statics
 
 enum TriageStatus triage_status = UNKNOWN;
 
 // Functions
-
 // Accelerometer support
 
 #if 0
@@ -215,9 +214,6 @@ int main(int aArgc, char *aArgv[])
 		return 0;
 	}
 
-	// Short delay to let the host detect the USB serial port
-	k_msleep(2000);
-
 #if defined(CONFIG_WAIT_FOR_CLI_CONNECTION)
 	LOG_INF("Waiting for host to be ready to communicate");
 
@@ -241,48 +237,14 @@ int main(int aArgc, char *aArgv[])
 
 	LOG_INF(WELCOME_TEXT);
 
-	// RGB LED
-	uint32_t i2c_cfg = I2C_SPEED_SET(I2C_SPEED_STANDARD) | I2C_MODE_CONTROLLER;
+	// Initialize the LEDs
+	ledsInit();
+	// Do a quick test cycle
+	ledsTest();
 
-	#define I2C_DEV_NODE DT_ALIAS(i2c2)
-
-	const struct device *const i2c_dev = DEVICE_DT_GET(I2C_DEV_NODE);
-
-	if (!device_is_ready(i2c_dev)) {
-		LOG_ERR("I2C device is not ready\n");
-	}
-	/* 1. Verify i2c_configure() */
-	else if (i2c_configure(i2c_dev, i2c_cfg)) {
-		LOG_ERR("I2C config failed\n");
-	}
-
-	uint8_t datas[2];
-
-	// RGB LED setup
-	datas[0] = 0x0A;
-	datas[1] = 0x19;
-	i2c_write(i2c_dev, datas, 2, 0x60);
-	datas[0] = 0x0B;
-	datas[1] = 0x19;
-	i2c_write(i2c_dev, datas, 2, 0x60);
-	datas[0] = 0x0C;
-	datas[1] = 0x19;
-	i2c_write(i2c_dev, datas, 2, 0x60);
-	datas[0] = 0x0D;
-	datas[1] = 0x19;
-	i2c_write(i2c_dev, datas, 2, 0x60);
-
-	while(1)
-	{
-		// Colours
-		datas[0] = 0x01;
-		datas[1] = 0x0B;
-		i2c_write(i2c_dev, datas, 2, 0x60);
-		k_sleep(K_MSEC(1000));
-		datas[0] = 0x01;
-		datas[1] = 0x00;
-		i2c_write(i2c_dev, datas, 2, 0x60);
-		k_sleep(K_MSEC(1000));
+	while(1) {
+		// Blink the LEDs
+		k_sleep(K_MSEC(500));
 	}
 
 #if 0 // ACC
