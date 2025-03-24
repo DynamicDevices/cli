@@ -237,10 +237,14 @@ int main(int aArgc, char *aArgv[])
 
 	LOG_INF(WELCOME_TEXT);
 
-	// Initialize the LEDs
-	ledsInit();
+	// Initialize the LED
+	ledInit();
+	
 	// Do a quick test cycle
-	ledsTest();
+	ledTest();
+
+	// Set to blink WHITE
+//    ledsBlink(RED, BLINK_SLOW, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
 
 	while(1) {
 		// Blink the LEDs

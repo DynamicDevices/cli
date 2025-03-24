@@ -46,15 +46,22 @@
 #define MP3320A_BLK_PWM                         0x02
 #define MP3320A_EN_CP                           0x01
 
-#define BLINK_SLOW                              0x80
-#define BLINK_FAST                              0x01
-
 // Statics
 
 LOG_MODULE_REGISTER(leds, CONFIG_LED_LOG_LEVEL);
 
 uint32_t i2c_cfg = I2C_SPEED_SET(I2C_SPEED_STANDARD) | I2C_MODE_CONTROLLER;
 const struct device *const i2c_dev = DEVICE_DT_GET(I2C_DEV_NODE);
+
+uint16_t _lastRed = 0;
+uint16_t _lastGreen = 0;
+uint16_t _lastBlue = 0;  
+uint16_t _lastWhite = 0;
+
+bool _lastBlink = false;
+uint8_t _lastFreq = 0;
+uint8_t _lastDuty = 0;
+uint8_t _lastCycles = 0;
 
 // Static Functions
 
@@ -67,11 +74,62 @@ bool ledWriteReg(const struct device *i2c_dev, uint8_t reg, uint8_t val)
     return i2c_write(i2c_dev, datas, 2, LED_ADDRESS);
 }
 
+bool ledWriteRGBW(uint16_t red, uint16_t green, uint16_t blue, uint16_t white)
+{
+    LOG_DBG("Writing to LED R 0x%X, G 0x%X, G 0x%X, W 0x%X", red, green, blue, white);
+
+    _lastBlink = false;
+    _lastRed = red;
+    _lastGreen = green;
+    _lastBlue = blue;
+    _lastWhite = white;
+
+    // Set driver colour mode
+    ledWriteReg(i2c_dev, MP3320A_REG_BLINKING_MODE, MP3320A_EN | MP3320A_BLK_PWM | MP3320A_EN_CP);
+
+    // Write Red low then high
+    ledWriteReg(i2c_dev, MP3320A_REG_CH1_LED_CURRENT_DIM_LOW, red & 0x07);
+    ledWriteReg(i2c_dev, MP3320A_REG_CH1_LED_CURRENT_DIM_HIGH, red >> 3);
+    // Write Green low then high
+    ledWriteReg(i2c_dev, MP3320A_REG_CH2_LED_CURRENT_DIM_LOW, green & 0x07);
+    ledWriteReg(i2c_dev, MP3320A_REG_CH2_LED_CURRENT_DIM_HIGH, green >> 3);
+    // Write Blue low then high
+    ledWriteReg(i2c_dev, MP3320A_REG_CH3_LED_CURRENT_DIM_LOW, blue & 0x07);
+    ledWriteReg(i2c_dev, MP3320A_REG_CH3_LED_CURRENT_DIM_HIGH, blue >> 3);
+    // Write White low then high
+    ledWriteReg(i2c_dev, MP3320A_REG_CH4_LED_CURRENT_DIM_LOW, white & 0x07);
+    ledWriteReg(i2c_dev, MP3320A_REG_CH4_LED_CURRENT_DIM_HIGH, white >> 3);
+
+    return true;
+}
+
+bool ledWriteBlink(uint8_t freq, uint8_t duty, uint8_t cycles)
+{
+    LOG_DBG("Writing to LEDS Blink Freq 0x%X, Duty 0x%X, Cycles 0x%X", freq, duty, cycles);
+
+    _lastBlink = true;
+    _lastFreq = freq;
+    _lastDuty = duty;
+    _lastCycles = cycles;
+
+    // Set driver blinking mode
+    ledWriteReg(i2c_dev, MP3320A_REG_BLINKING_MODE, MP3320A_DMBLK | MP3320A_EN | MP3320A_CH4MD | MP3320A_BLK_PWM | MP3320A_EN_CP);
+
+    // Write Blinking Frequency
+    ledWriteReg(i2c_dev, MP3320A_REG_BLINKING_FREQ, freq);
+    // Write Blinking Duty Tblinkon = 16.384 * DUTYBLK[7:0] (ms) 
+    ledWriteReg(i2c_dev, MP3320A_REG_BLINKING_DUTY, duty);
+    // Write Blinking Cycles
+    ledWriteReg(i2c_dev, MP3320A_REG_BLINKING_CYCLES, cycles);
+
+    return true;
+}
+
 // Functions
 
-bool ledsInit(void)
+bool ledInit(void)
 {
-    LOG_DBG("Initialising LEDs");
+    LOG_DBG("Initialising LED");
 
 	// RGB LED
 	if (!device_is_ready(i2c_dev)) {
@@ -96,97 +154,68 @@ bool ledsInit(void)
     return true;
 }
 
-bool ledsWriteRGBW(uint16_t red, uint16_t green, uint16_t blue, uint16_t white)
+bool ledColour(EnumLedBlinkColour colour)
 {
-    LOG_DBG("Writing to LEDS R 0x%X, G 0x%X, G 0x%X, W 0x%X", red, green, blue, white);
-
-    // Write Red low then high
-    ledWriteReg(i2c_dev, MP3320A_REG_CH1_LED_CURRENT_DIM_LOW, red & 0x07);
-    ledWriteReg(i2c_dev, MP3320A_REG_CH1_LED_CURRENT_DIM_HIGH, red >> 3);
-    // Write Green low then high
-    ledWriteReg(i2c_dev, MP3320A_REG_CH2_LED_CURRENT_DIM_LOW, green & 0x07);
-    ledWriteReg(i2c_dev, MP3320A_REG_CH2_LED_CURRENT_DIM_HIGH, green >> 3);
-    // Write Blue low then high
-    ledWriteReg(i2c_dev, MP3320A_REG_CH3_LED_CURRENT_DIM_LOW, blue & 0x07);
-    ledWriteReg(i2c_dev, MP3320A_REG_CH3_LED_CURRENT_DIM_HIGH, blue >> 3);
-    // Write White low then high
-    ledWriteReg(i2c_dev, MP3320A_REG_CH4_LED_CURRENT_DIM_LOW, white & 0x07);
-    ledWriteReg(i2c_dev, MP3320A_REG_CH4_LED_CURRENT_DIM_HIGH, white >> 3);
-
-    return true;
-}
-
-bool ledsWriteBlink(uint8_t freq, uint8_t duty, uint8_t cycles)
-{
-    LOG_DBG("Writing to LEDS Blink Freq 0x%X, Duty 0x%X, Cycles 0x%X", freq, duty, cycles);
-
-    // Set driver blinking mode
-    ledWriteReg(i2c_dev, MP3320A_REG_BLINKING_MODE, MP3320A_DMBLK | MP3320A_EN | MP3320A_BLK_PWM | MP3320A_EN_CP);
-
-    // Write Blinking Frequency
-    ledWriteReg(i2c_dev, MP3320A_REG_BLINKING_FREQ, freq);
-    // Write Blinking Duty Tblinkon = 16.384 * DUTYBLK[7:0] (ms) 
-    ledWriteReg(i2c_dev, MP3320A_REG_BLINKING_DUTY, duty);
-    // Write Blinking Cycles
-    ledWriteReg(i2c_dev, MP3320A_REG_BLINKING_CYCLES, cycles);
-
-    return true;
-}
-
-bool ledsTest()
-{
-    // Cycle through R->G>B>W
-    ledsWriteRGBW(LEDS_MAX_VAL, 0, 0, 0);
-	k_sleep(K_MSEC(500));
-	ledsWriteRGBW(0, LEDS_MAX_VAL, 0, 0);
-	k_sleep(K_MSEC(500));
-	ledsWriteRGBW(0, 0, LEDS_MAX_VAL, 0);
-	k_sleep(K_MSEC(500));
-	ledsWriteRGBW(0, 0, 0, LEDS_MAX_VAL);
-	k_sleep(K_MSEC(500));
-	ledsWriteRGBW(0, 0, 0, 0);
-
-	k_sleep(K_MSEC(500));
-	ledsWriteRGBW(LEDS_MAX_VAL, 0, 0, 0);
-    ledsWriteBlink(BLINK_SLOW, 0x03, BLINK_CYCLES_FOREVER);
-
-    return true;
-}
-
-
-bool ledBlink(EnumLedBlinkColour colour, EnumLedBlinkSpeed speed, uint8_t cycles)
-{
-    LOG_DBG("Blinking LED %d at speed %d for %d cycles", colour, speed, cycles);
+    LOG_DBG("Setting LED %d", colour);
 
     switch(colour)
     {
         case RED:
-            ledsWriteRGBW(LEDS_MAX_VAL, 0, 0, 0);
+            ledWriteRGBW(LED_MAX_BRIGHTNESS, 0, 0, 0);
             break;
         case GREEN:
-            ledsWriteRGBW(0, LEDS_MAX_VAL, 0, 0);
+            ledWriteRGBW(0, LED_MAX_BRIGHTNESS, 0, 0);
             break;
         case BLUE:
-            ledsWriteRGBW(0, 0, LEDS_MAX_VAL, 0);
+            ledWriteRGBW(0, 0, LED_MAX_BRIGHTNESS, 0);
             break;
         case WHITE:
-            ledsWriteRGBW(0, 0, 0, LEDS_MAX_VAL);
+            ledWriteRGBW(0, 0, 0, LED_MAX_BRIGHTNESS);
             break;
         default:
             return false;
     }
 
-    switch(speed)
-    {
-        case LED_BLINK_SLOW:
-            ledsWriteBlink(BLINK_FAST, DUTY_10, cycles);
-            break;
-        case LED_BLINK_FAST:
-            ledsWriteBlink(BLINK_SLOW, DUTY_10, cycles);
-            break;
-        default:
-            return false;
-    }
+    return true;
+}
+
+bool ledBlink(EnumLedBlinkColour colour, EnumLedBlinkSpeed speed, EnumLedBlinkDuty duty_percentage, uint8_t cycles)
+{
+    LOG_DBG("Blinking LED %d at speed %d for %d cycles", colour, speed, cycles);
+
+    ledColour(colour);
+
+    // TODO: Calculate correct duty percentage based on frequency
+    ledWriteBlink(speed, duty_percentage, cycles);
+    
+    return true;
+}
+
+bool ledPopLastSettings()
+{
+    ledWriteRGBW(_lastRed, _lastGreen, _lastBlue, _lastWhite);
+
+    if(_lastBlink)
+        ledWriteBlink(_lastFreq, _lastDuty, _lastCycles);
+
+    return true;
+}
+bool ledTest()
+{
+    // Cycle through R->G>B>W
+    ledWriteRGBW(LED_MAX_BRIGHTNESS, 0, 0, 0);
+	k_sleep(K_MSEC(500));
+	ledWriteRGBW(0, LED_MAX_BRIGHTNESS, 0, 0);
+	k_sleep(K_MSEC(500));
+	ledWriteRGBW(0, 0, LED_MAX_BRIGHTNESS, 0);
+	k_sleep(K_MSEC(500));
+	ledWriteRGBW(0, 0, 0, LED_MAX_BRIGHTNESS);
+	k_sleep(K_MSEC(500));
+	ledWriteRGBW(0, 0, 0, 0);
+
+	k_sleep(K_MSEC(500));
+	ledWriteRGBW(LED_MAX_BRIGHTNESS, 0, 0, 0);
+    ledBlink(RED, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
 
     return true;
 }
