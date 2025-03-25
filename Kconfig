@@ -93,3 +93,7 @@ config FLEXSTRAP_CONTROLS_POWER
 config FLEXSTRAP_PULL_DOWN
 	bool "Enable pull down on FlexStrap - for non FlexStrap enabled boards"
 	default y
+
+config FIRMWARE_REBOOT
+	bool "Enable firmware reboot to ensure device stays up"
+	

@@ -244,6 +244,16 @@ int lorawan_client_thread(void)
 
 	while (1)
 	{
+#ifdef CONFIG_FIRMWARE_REBOOT
+		int64_t uptime_ms = k_uptime_get(); 
+		LOG_DBG("Time elapsed since boot: %llu ms", uptime_ms);
+		if(uptime_ms >= 15*60*1000)
+		{
+			LOG_WRN("Firmware Reboot time reached");
+			sys_reboot(SYS_REBOOT_COLD);
+		}
+#endif
+
 #ifdef CONFIG_FLEXSTRAP_CONTROLS_POWER
 		// Don't transmit if we're off
 		if(_last_triage_status == OFF) {
@@ -261,7 +271,7 @@ int lorawan_client_thread(void)
 		get_last_gnss_gst(&last_gst);
 
 #if VERSION == 1 
-		uint8_t payload[19];
+		uint8_t payload[22];
 #else
 		uint8_t payload[5 + sizeof( struct minmea_sentence_gga) + sizeof( struct minmea_sentence_gst)];
 #endif
@@ -274,10 +284,10 @@ int lorawan_client_thread(void)
 		if(_last_triage_status > DEAD)
 		{
 			LOG_WRN("Invalid triage status %d - forcing P3 (0)", _last_triage_status);
-			payload[1] = _last_triage_status;
+			payload[1] = P3;
 		}
 		else
-			payload[1] = P3;
+			payload[1] = _last_triage_status;
 
 		// Byte 2 - batteryPercentage [1]
 		payload[2] = battery_percentage;
@@ -298,11 +308,11 @@ int lorawan_client_thread(void)
 		// Byte 13 .. 16 - altitude [4]
 		*((float *)&payload[13]) = minmea_tofloat(&last_gga.altitude);
 
-		// Byte 17 - accuracyMetres [1]
-		payload[17] = (uint8_t)minmea_tofloat(&last_gst.rms_deviation);
+		// Byte 17 .. 20 - accuracyMetres [4]
+		*((float *)&payload[17]) = minmea_tofloat(&last_gst.rms_deviation);
 
-		// Byte 18 - debugCount [1]
-		payload[18] = debug_count++;
+		// Byte 21 - debugCount [1]
+		payload[21] = debug_count++;
 
 #if VERSION == 2
 		// Byte (5+sizeof(struct minmea_sentence_gga)) to Z last GST
