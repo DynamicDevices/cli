@@ -244,6 +244,13 @@ int lorawan_client_thread(void)
 
 	while (1)
 	{
+#ifdef CONFIG_FLEXSTRAP_CONTROLS_POWER
+		// Don't transmit if we're off
+		if(_last_triage_status == OFF) {
+			k_sleep(K_SECONDS(5));
+			continue;
+		}
+#endif
 
 #define LORAWAN_PORT 2
 
@@ -325,7 +332,13 @@ int lorawan_client_thread(void)
 		}
 		else
 		{
-			LOG_DBG("Data sent! (debug count %d) (tx payload bytes %d)", debug_count, sizeof(payload));
+			uint8_t max_next_payload_size;
+			uint8_t max_payload_size;
+
+			lorawan_get_payload_sizes(&max_next_payload_size, &max_payload_size);
+
+			LOG_DBG("Data sent! Debug count %d, TX payload bytes %d, Max next: %d, Max: %d)", 
+				debug_count, sizeof(payload), max_next_payload_size, max_payload_size);
 			ledSetColourAndWaitMs(GREEN, 500);
 		}
 		

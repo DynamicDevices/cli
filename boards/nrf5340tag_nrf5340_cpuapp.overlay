@@ -35,6 +35,9 @@
 		// ADC
 		flex_enable-gpios = <&gpio1 5 0>;
 		io-channels = <&adc 0>;
+
+		// GPIO
+		flex_detect-gpios = <&gpio0 7 0>;
 	};
 };
 

@@ -18,6 +18,7 @@ LOG_MODULE_REGISTER(flexstrap, 4);
 #define ZEPHYR_USER_NODE DT_PATH(zephyr_user)
 
 const struct gpio_dt_spec flex_enable = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, flex_enable_gpios);
+const struct gpio_dt_spec flex_detect = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, flex_detect_gpios);
 
 #if NCS_VERSION_NUMBER >= 0x20901
 
@@ -43,7 +44,7 @@ static const struct adc_dt_spec adc_channels[] = {
 
 // Enumerations
 
-EnumTriageStatus _last_triage_status = UNKNOWN;
+EnumTriageStatus _last_triage_status = OFF;
 
 // Statics
 
@@ -68,6 +69,19 @@ bool flexStrapInit(void)
 			else {
 				LOG_INF("Flex Enable pin set HI");
 			}
+		}
+    }
+
+    if (!gpio_is_ready_dt(&flex_detect)) { 
+		LOG_ERR("Flex Detect pin not ready");
+	} else {
+#ifdef CONFIG_FLEXSTRAP_PULL_DOWN
+        LOG_ERR("*** CHANGE THIS FOR FLEX STRAP ENABLED HARDWARE *** Configuring Flex Detect pin with GPIO_PULL_DOWN");
+		if ( gpio_pin_configure_dt(&flex_detect, GPIO_INPUT | GPIO_PULL_DOWN) < 0 ) {
+#else
+    if ( gpio_pin_configure_dt(&flex_detect, GPIO_INPUT) < 0 ) {
+#endif
+			LOG_ERR("Can't configure Flex Detect pin");
 		}
     }
 
@@ -153,6 +167,16 @@ int flexstrap_thread(void)
     LOG_DBG("Flex strap reading ADC");
 	while(1) 
 	{
+#ifdef CONFIG_FLEXSTRAP_CONTROLS_POWER
+        int pin_state = gpio_pin_get_dt(&flex_detect);
+        if(pin_state == 1) {
+            _last_triage_status = OFF;
+            LOG_INF("Flex Detect pin is HI - Flex not strapped on - Waiting 5s");
+            k_sleep(K_MSEC(5000));
+            continue;
+        }
+#endif
+
 #if NCS_VERSION_NUMBER < 0x20901
 		err = adc_read(adc_channels[0].dev, &sequence);
 #else
@@ -236,9 +260,9 @@ int flexstrap_thread(void)
                     break;
                 case S1:
                     // White
-                    LOG_DBG("- setting LED to FAST White");
-                    ledBlink(WHITE, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
-                    break;
+//                    LOG_DBG("- setting LED to FAST White");
+//                    ledBlink(WHITE, LED_BLINK_FAST, DUTY_10_PERCENT, BLINK_CYCLES_FOREVER);
+//                    break;
                 case S2:
                     // White
 //                    LOG_DBG("- setting LED to FAST White");

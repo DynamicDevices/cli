@@ -21,6 +21,7 @@ enum TriageStatus {
 
     FAULT = 0x80,
     UNUSED = 0x81,
+    OFF = 0x82,
     UNKNOWN = 0xFF,
 };
 typedef enum TriageStatus EnumTriageStatus;

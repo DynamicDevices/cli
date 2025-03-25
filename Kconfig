@@ -84,3 +84,12 @@ source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
 module = LORAWAN_CLIENT
 module-str = lorawan-client
 source "${ZEPHYR_BASE}/subsys/logging/Kconfig.template.log_config"
+
+# Configure FlexStrap
+
+config FLEXSTRAP_CONTROLS_POWER
+	bool "Enable handling of FlexStrap to control whether we transmit or not"
+
+config FLEXSTRAP_PULL_DOWN
+	bool "Enable pull down on FlexStrap - for non FlexStrap enabled boards"
+	default y
