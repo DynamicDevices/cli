@@ -78,20 +78,20 @@ void nvs_read_init_parameter(struct nvs_fs *fs, uint16_t id, void *data)
 	char *array = (void *)data;
 	int *devnonce = (void *)data;
 
-	LOG_INF("NVS ID %d %s: ", id, nvs_name[id]);
+	LOG_DBG("NVS ID %d %s: ", id, nvs_name[id]);
 	ret = nvs_read(fs, id, data, nvs_len[id]);
 	if (ret > 0) { 
 		// Item found, print output:
 		switch (id) {
 			case NVS_DEVNONCE_ID:
-				LOG_INF("%d", (uint16_t)*devnonce);
+				LOG_DBG("%d", (uint16_t)*devnonce);
 				break;
 			case NVS_LORAWAN_DEV_EUI_ID:
 			case NVS_LORAWAN_JOIN_EUI_ID:
 			case NVS_LORAWAN_APP_KEY_ID:
 			case NVS_LORAWAN_NWK_KEY_ID:
 				for (int i = 0; i < nvs_len[id]; i++)
-					LOG_INF("- %02X ",array[i]);
+					LOG_DBG("- %02X ",array[i]);
 				break;
 			default:
 				break;

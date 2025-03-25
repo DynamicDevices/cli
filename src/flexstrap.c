@@ -66,9 +66,6 @@ bool flexStrapInit(void)
 			if ( gpio_pin_set_dt(&flex_enable, 1)  < 0) {
 				LOG_ERR("Can't set Flex Enable pin HI");
 			}
-			else {
-				LOG_INF("Flex Enable pin set HI");
-			}
 		}
     }
 

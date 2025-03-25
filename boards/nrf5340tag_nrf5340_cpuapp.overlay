@@ -20,6 +20,10 @@
 //		zephyr,entropy = &rng;
 //	};
 
+	chosen {
+		zephyr,shell-uart = &cdc_acm_uart;
+	};
+
 	aliases {
 		lora0 = &lora;
 		i2c2 = &i2c2;
@@ -141,6 +145,14 @@
 };
 
 // NOTE: We need to disable components we aren't using as they share resources
+
+// USB UART
+
+&zephyr_udc0 {
+	cdc_acm_uart: cdc_acm_uart {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
 
 // GPS
 

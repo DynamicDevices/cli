@@ -130,7 +130,6 @@ void gpsparser(void)
     if (!gpio_is_ready_dt(&gnss_vbckup)) { return; }
 	if (!gpio_is_ready_dt(&gnss_vcc)) { return; }
 	if (!gpio_is_ready_dt(&gnss_reset)) { return; }
-	LOG_INF("pins are ready.");
 
     // Configure the pins
     ret = gpio_pin_configure_dt(&gnss_vbckup, GPIO_OUTPUT_INACTIVE);
@@ -139,10 +138,9 @@ void gpsparser(void)
 	if (ret < 0) { return; }
 	ret = gpio_pin_configure_dt(&gnss_reset, GPIO_OUTPUT_INACTIVE);
 	if (ret < 0) { return; }
-	LOG_INF("pins are configured.");
 
     // GNSS start-up procedure
-	LOG_INF("GNSS start-up procedure...");
+	LOG_INF("GNSS start-up...");
 	gpio_pin_set_dt(&gnss_vbckup, 0);
 	gpio_pin_set_dt(&gnss_vcc, 0);
 	gpio_pin_set_dt(&gnss_reset, 0);
@@ -151,7 +149,6 @@ void gpsparser(void)
 	gpio_pin_set_dt(&gnss_vcc, 1);
 	k_msleep(SLEEP_TIME_MS);
 	gpio_pin_set_dt(&gnss_reset, 1);
-	LOG_INF("GNSS is set active.");
 
     int err = uart_configure(uart, &uart_cfg);
 
