@@ -17,4 +17,9 @@ bool get_last_gnss_gga(const struct minmea_sentence_gga *ptr_minmea_sentence_gga
 */
 bool get_last_gnss_gst(const struct minmea_sentence_gst *ptr_minmea_sentence_gst);
 
+/* 
+    Returns a copy of the last GNSS RMC sentence we received
+*/
+bool get_last_gnss_rmc(const struct minmea_sentence_rmc *ptr_minmea_sentence_rmc);
+
 #endif

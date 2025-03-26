@@ -43,6 +43,12 @@
 		// GPIO
 		flex_detect-gpios = <&gpio0 7 0>;
 	};
+
+	rtc-emul {
+		compatible = "zephyr,rtc-emul";
+		status = "okay";
+		alarms-count = < 0 >;
+	};
 };
 
 &pinctrl {
@@ -270,9 +276,7 @@
 	status = "okay";
 	channel@0 {
 		reg = <0>;
-//		zephyr,gain = "ADC_GAIN_1_4";
 		zephyr,gain = "ADC_GAIN_1_3";
-//		zephyr,reference = "ADC_REF_VDD_1_4";
 		zephyr,reference = "ADC_REF_INTERNAL";
 		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
 		zephyr,input-positive = <NRF_SAADC_AIN0>; /* P0.02 for nRF52xx, P0.04 for nRF5340 */

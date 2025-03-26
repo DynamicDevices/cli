@@ -16,6 +16,8 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/hwinfo.h>
+#include <zephyr/drivers/rtc.h>
 
 #include "gpsparser.h"
 
@@ -34,7 +36,8 @@ const struct gpio_dt_spec gnss_vbckup = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnss_
 const struct gpio_dt_spec gnss_vcc = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnss_vcc_on_gpios);
 const struct gpio_dt_spec gnss_reset = GPIO_DT_SPEC_GET(ZEPHYR_USER_NODE, gnss_reset_gpios);
 
-const struct device *uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
+static const struct device *rtc = DEVICE_DT_GET_ANY(zephyr_rtc_emul);
+static const struct device *uart = DEVICE_DT_GET(DT_NODELABEL(uart0));
 
 const struct uart_config uart_cfg = {
 		.baudrate = 115200,
@@ -51,7 +54,7 @@ static char rxbuffer[RX_BUFFER_SIZE] = {'\0'};
 
 static struct minmea_sentence_gga _last_gnss_gga;
 static struct minmea_sentence_gst _last_gnss_gst;
-
+static struct minmea_sentence_rmc _last_gnss_rmc;
 
 K_MUTEX_DEFINE(data_integrity_mutex);
 
@@ -67,6 +70,14 @@ bool get_last_gnss_gst(const struct minmea_sentence_gst *ptr_minmea_sentence_gst
 {
 	k_mutex_lock(&data_integrity_mutex, K_FOREVER);
 	memcpy( (struct minmea_sentence_gst *)ptr_minmea_sentence_gst, &_last_gnss_gst, sizeof(struct minmea_sentence_gst));
+	k_mutex_unlock(&data_integrity_mutex);
+	return true;
+}
+
+bool get_last_gnss_rmc(const struct minmea_sentence_rmc *ptr_minmea_sentence_rmc)
+{
+	k_mutex_lock(&data_integrity_mutex, K_FOREVER);
+	memcpy( (struct minmea_sentence_gst *)ptr_minmea_sentence_rmc, &_last_gnss_rmc, sizeof(struct minmea_sentence_rmc));
 	k_mutex_unlock(&data_integrity_mutex);
 	return true;
 }
@@ -127,29 +138,52 @@ void gpsparser(void)
 	uint8_t gst_checksum;
 	bool gst_checksum_success;
 
+	// Set our RTC to system time (which will be elapsed time since startup until set with GNSS data)
+	// TODO: Seems to be off by a couple of seconds?
+	time_t rawtime = time(NULL);
+	struct tm *p = gmtime(&rawtime);
+	rtc_set_time(rtc, (struct rtc_time *)p);
+	
     if (!gpio_is_ready_dt(&gnss_vbckup)) { return; }
 	if (!gpio_is_ready_dt(&gnss_vcc)) { return; }
 	if (!gpio_is_ready_dt(&gnss_reset)) { return; }
 
-    // Configure the pins
-    ret = gpio_pin_configure_dt(&gnss_vbckup, GPIO_OUTPUT_INACTIVE);
-	if (ret < 0) { return; }
-	ret = gpio_pin_configure_dt(&gnss_vcc, GPIO_OUTPUT_INACTIVE);
-	if (ret < 0) { return; }
-	ret = gpio_pin_configure_dt(&gnss_reset, GPIO_OUTPUT_INACTIVE);
-	if (ret < 0) { return; }
+	uint32_t cause;
+	hwinfo_get_reset_cause(&cause);
+	hwinfo_clear_reset_cause();
+	LOG_INF("Reset cause 0x%04X", cause);
+	
+	if( cause == 0x0000) {
 
-    // GNSS start-up procedure
-	LOG_INF("GNSS start-up...");
-	gpio_pin_set_dt(&gnss_vbckup, 0);
-	gpio_pin_set_dt(&gnss_vcc, 0);
-	gpio_pin_set_dt(&gnss_reset, 0);
-	k_msleep(SLEEP_TIME_MMS);
-	gpio_pin_set_dt(&gnss_vbckup, 1);
-	gpio_pin_set_dt(&gnss_vcc, 1);
-	k_msleep(SLEEP_TIME_MS);
-	gpio_pin_set_dt(&gnss_reset, 1);
+		LOG_INF("GNSS start-up (hard)...");
 
+		// Configure the pins
+		ret = gpio_pin_configure_dt(&gnss_vbckup, GPIO_OUTPUT_INACTIVE);
+		if (ret < 0) { return; }
+		ret = gpio_pin_configure_dt(&gnss_vcc, GPIO_OUTPUT_INACTIVE);
+		if (ret < 0) { return; }
+		ret = gpio_pin_configure_dt(&gnss_reset, GPIO_OUTPUT_INACTIVE);
+		if (ret < 0) { return; }
+
+		// GNSS start-up procedure
+		gpio_pin_set_dt(&gnss_vbckup, 0);
+		gpio_pin_set_dt(&gnss_vcc, 0);
+		gpio_pin_set_dt(&gnss_reset, 0);
+		k_msleep(SLEEP_TIME_MMS);
+		gpio_pin_set_dt(&gnss_vbckup, 1);
+		gpio_pin_set_dt(&gnss_vcc, 1);
+		k_msleep(SLEEP_TIME_MS);
+		gpio_pin_set_dt(&gnss_reset, 1);
+	} else {
+		LOG_INF("GNSS start-up (soft)...");
+		// Configure the pins
+		ret = gpio_pin_configure_dt(&gnss_vbckup, GPIO_OUTPUT_HIGH);
+		if (ret < 0) { return; }
+		ret = gpio_pin_configure_dt(&gnss_vcc, GPIO_OUTPUT_HIGH);
+		if (ret < 0) { return; }
+		ret = gpio_pin_configure_dt(&gnss_reset, GPIO_OUTPUT_HIGH);
+		if (ret < 0) { return; }
+	}
     int err = uart_configure(uart, &uart_cfg);
 
 	if (err == -ENOSYS) {
@@ -224,6 +258,28 @@ of position fix and status.
 		if(rxbuffer[0] != '\0')  {
 			LOG_DBG("%s", rxbuffer);
 			switch (minmea_sentence_id(rxbuffer, false)) {
+
+				case MINMEA_SENTENCE_RMC: {
+					struct minmea_sentence_rmc frame;
+					
+					if (minmea_parse_rmc(&frame, rxbuffer)) {
+
+						if(frame.valid) {
+							struct timespec ts;
+							minmea_gettime(&ts, &frame.date, &frame.time);
+
+							struct tm *lt = gmtime(&ts.tv_sec);
+							struct rtc_time rt;
+							memcpy(&rt, lt, sizeof(struct tm));
+							rt.tm_nsec = ts.tv_nsec;
+							rtc_set_time(rtc, &rt);
+
+							k_mutex_lock(&data_integrity_mutex, K_FOREVER);
+							memcpy(&_last_gnss_rmc, &frame, sizeof(struct minmea_sentence_rmc));
+							k_mutex_unlock(&data_integrity_mutex);
+						}
+					}
+				}
 				case MINMEA_SENTENCE_GGA: {
 					struct minmea_sentence_gga frame;
 					if (minmea_parse_gga(&frame, rxbuffer)) {

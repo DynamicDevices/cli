@@ -16,9 +16,11 @@
 #include <zephyr/usb/usb_device.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/flash.h>
+#include <zephyr/drivers/rtc.h>
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/fs/nvs.h>
 #include <zephyr/sys/reboot.h>
+#include <zephyr/sys/timeutil.h>
 
 #include "openthread/platform/logging.h"
 #include "openthread/instance.h"
@@ -40,8 +42,14 @@
 
 LOG_MODULE_REGISTER(lorawan_client, CONFIG_LORAWAN_CLIENT_LOG_LEVEL);
 
+// Statics
 
+static const struct device *rtc = DEVICE_DT_GET_ANY(zephyr_rtc_emul);
+
+// Function Prototypes
 void LoRaMacTestSetDutyCycleOn(bool enable);
+
+// Functions
 
 static void dl_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t snr, uint8_t len, const uint8_t *data)
 {
@@ -250,7 +258,7 @@ int lorawan_client_thread(void)
 		if(uptime_ms >= 15*60*1000)
 		{
 			LOG_WRN("Firmware Reboot time reached");
-			sys_reboot(SYS_REBOOT_COLD);
+			sys_reboot(SYS_REBOOT_WARM);
 		}
 #endif
 
@@ -266,12 +274,14 @@ int lorawan_client_thread(void)
 
 		struct minmea_sentence_gga last_gga;
 		struct minmea_sentence_gst last_gst;
+		struct minmea_sentence_rmc last_rmc;
 
 		get_last_gnss_gga(&last_gga);
 		get_last_gnss_gst(&last_gst);
+		get_last_gnss_rmc(&last_rmc);
 
 #if VERSION == 1 
-		uint8_t payload[22];
+		uint8_t payload[30];
 #else
 		uint8_t payload[5 + sizeof( struct minmea_sentence_gga) + sizeof( struct minmea_sentence_gst)];
 #endif
@@ -311,8 +321,23 @@ int lorawan_client_thread(void)
 		// Byte 17 .. 20 - accuracyMetres [4]
 		*((float *)&payload[17]) = minmea_tofloat(&last_gst.rms_deviation);
 
-		// Byte 21 - debugCount [1]
-		payload[21] = debug_count++;
+		struct timespec ts;
+		struct rtc_time rtctime;
+		rtc_get_time(rtc, &rtctime);
+		
+		LOG_INF("Time is: %s", asctime(rtc_time_to_tm(&rtctime)));
+
+		time_t timestamp = timeutil_timegm(rtc_time_to_tm(&rtctime));
+		ts.tv_sec = timestamp;
+		ts.tv_nsec = rtctime.tm_nsec;
+		
+		// Byte 21 .. 24 - UTC time seconds
+		*((uint32_t *)&payload[21]) = (uint32_t)ts.tv_sec;
+		// Byte 25 .. 28 - UTC time nano seconds
+		*((uint32_t *)&payload[25]) = (uint32_t)ts.tv_nsec;
+
+		// Byte 29 - debugCount [1]
+		payload[29] = debug_count++;
 
 #if VERSION == 2
 		// Byte (5+sizeof(struct minmea_sentence_gga)) to Z last GST
