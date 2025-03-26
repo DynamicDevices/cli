@@ -281,7 +281,7 @@ int lorawan_client_thread(void)
 		get_last_gnss_rmc(&last_rmc);
 
 #if VERSION == 1 
-		uint8_t payload[30];
+		uint8_t payload[31];
 #else
 		uint8_t payload[5 + sizeof( struct minmea_sentence_gga) + sizeof( struct minmea_sentence_gst)];
 #endif
@@ -338,6 +338,9 @@ int lorawan_client_thread(void)
 
 		// Byte 29 - debugCount [1]
 		payload[29] = debug_count++;
+
+		// Byte 30 - Satellites count [2]
+		payload[30] = last_gga.satellites_tracked;
 
 #if VERSION == 2
 		// Byte (5+sizeof(struct minmea_sentence_gga)) to Z last GST
